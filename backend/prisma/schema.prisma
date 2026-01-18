@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UserType {
+  id    String @id @default(cuid())
+  name  String
+  code  String
+  users User[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  imageUrl     String?
+  userTypeId   String
+  userType     UserType @relation(fields: [userTypeId], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdTickets Ticket[] @relation("Creator")
+  assignedTickets Ticket[] @relation("Assignee")
+  uploads Attachment[] @relation("Uploader")
+  history TicketHistory[] @relation("Actor")
+  infoRequests InfoRequest[] @relation("RequesterTech")
+  infoResponses InfoResponse[] @relation("Responder")
+}
+
+model TicketType {
+  id                String   @id @default(cuid())
+  name              String
+  description       String
+  defaultPriorityId String
+  defaultPriority   Priority @relation(fields: [defaultPriorityId], references: [id])
+  isActive          Boolean  @default(true)
+  tickets           Ticket[]
+}
+
+model Priority {
+  id      String   @id @default(cuid())
+  name    String
+  color   String
+  tickets Ticket[]
+  types   TicketType[]
+}
+
+model Status {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id          String   @id @default(cuid())
+  ticketTypeId String
+  ticketType  TicketType @relation(fields: [ticketTypeId], references: [id])
+  title       String
+  description String
+  priorityId  String
+  priority    Priority @relation(fields: [priorityId], references: [id])
+  statusId    String
+  status      Status   @relation(fields: [statusId], references: [id])
+  creatorId   String
+  creator     User     @relation("Creator", fields: [creatorId], references: [id])
+  assigneeId  String?
+  assignee    User?    @relation("Assignee", fields: [assigneeId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  resolvedAt  DateTime?
+  attachments Attachment[]
+  history     TicketHistory[]
+  infoRequests InfoRequest[]
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  uploaderId  String
+  uploader    User     @relation("Uploader", fields: [uploaderId], references: [id])
+  originalName String
+  storagePath String
+  mimeType    String
+  sizeBytes   Int
+  uploadedAt  DateTime @default(now())
+}
+
+model TicketHistory {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  actorId   String
+  actor     User     @relation("Actor", fields: [actorId], references: [id])
+  eventType String
+  message   String?
+  dataJson  String?
+  createdAt DateTime @default(now())
+}
+
+model InfoRequest {
+  id              String   @id @default(cuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  requesterTechId String
+  requesterTech   User     @relation("RequesterTech", fields: [requesterTechId], references: [id])
+  message         String
+  requestedFields String?
+  status          String
+  createdAt       DateTime @default(now())
+  closedAt        DateTime?
+  responses       InfoResponse[]
+}
+
+model InfoResponse {
+  id            String   @id @default(cuid())
+  infoRequestId String
+  infoRequest   InfoRequest @relation(fields: [infoRequestId], references: [id])
+  responderId   String
+  responder     User     @relation("Responder", fields: [responderId], references: [id])
+  message       String
+  createdAt     DateTime @default(now())
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  name       String
+  periodType String
+  createdAt  DateTime @default(now())
+  filePath   String
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
