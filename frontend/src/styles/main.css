@@ -50,6 +50,7 @@ header {
 
 .check-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -87,6 +88,12 @@ input, select, textarea {
   font-size: 14px;
   box-sizing: border-box;
   max-width: 100%;
+}
+
+label:not(.check-row) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 nav a {
