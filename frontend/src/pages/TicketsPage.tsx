@@ -169,22 +169,26 @@ export function TicketsPage() {
                 ))}
               </select>
             </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={filters.assignedToMe}
-                onChange={(event) => setFilters({ ...filters, assignedToMe: event.target.checked })}
-              />
-              Assigned to me
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={filters.createdByMe}
-                onChange={(event) => setFilters({ ...filters, createdByMe: event.target.checked })}
-              />
-              Created by me
-            </label>
+            <div className="filters-checks">
+              <label className="check-row" htmlFor="assigned-to-me">
+                <span>Assigned to me</span>
+                <input
+                  id="assigned-to-me"
+                  type="checkbox"
+                  checked={filters.assignedToMe}
+                  onChange={(event) => setFilters({ ...filters, assignedToMe: event.target.checked })}
+                />
+              </label>
+              <label className="check-row" htmlFor="created-by-me">
+                <span>Created by me</span>
+                <input
+                  id="created-by-me"
+                  type="checkbox"
+                  checked={filters.createdByMe}
+                  onChange={(event) => setFilters({ ...filters, createdByMe: event.target.checked })}
+                />
+              </label>
+            </div>
           </div>
         </div>
       </div>
