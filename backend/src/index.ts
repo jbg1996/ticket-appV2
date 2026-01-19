@@ -12,6 +12,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { requireAuth, requireRole } from './middleware/auth.js';
 import { login, logout, me } from './controllers/authController.js';
 import { listUsers, createUser, updateUser, disableUser, deleteUser } from './controllers/userController.js';
+import "dotenv/config";
 import {
   listUserTypes,
   listStatuses,
