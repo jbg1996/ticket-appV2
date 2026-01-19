@@ -55,6 +55,16 @@ header {
   gap: 12px;
 }
 
+.check-row__text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.check-row__input {
+  flex: 0 0 auto;
+}
+
 button {
   border: none;
   background: #2563eb;

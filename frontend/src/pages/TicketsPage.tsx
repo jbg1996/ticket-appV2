@@ -171,8 +171,9 @@ export function TicketsPage() {
             </label>
             <div className="filters-checks">
               <label className="check-row" htmlFor="assigned-to-me">
-                <span>Assigned to me</span>
+                <span className="check-row__text">Assigned to me</span>
                 <input
+                  className="check-row__input"
                   id="assigned-to-me"
                   type="checkbox"
                   checked={filters.assignedToMe}
@@ -180,8 +181,9 @@ export function TicketsPage() {
                 />
               </label>
               <label className="check-row" htmlFor="created-by-me">
-                <span>Created by me</span>
+                <span className="check-row__text">Created by me</span>
                 <input
+                  className="check-row__input"
                   id="created-by-me"
                   type="checkbox"
                   checked={filters.createdByMe}
