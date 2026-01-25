@@ -23,7 +23,7 @@ export function DashboardPage() {
   const open = tickets.filter((ticket) => ticket.status.name !== 'Resuelto' && ticket.status.name !== 'Cerrado').length;
 
   return (
-    <div className="container">
+    <div className="page">
       <h2>Dashboard</h2>
       <div className="grid grid-2">
         <div className="card">

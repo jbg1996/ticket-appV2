@@ -7,12 +7,14 @@ export type User = {
   role: 'ADMIN' | 'TECH' | 'REQUESTER';
   firstName: string;
   lastName: string;
+  photoUrl?: string | null;
 };
 
 type AuthContextValue = {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  setPhoto: (file: File) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -47,7 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const value = useMemo(() => ({ user, login, logout }), [user]);
+  const setPhoto = (file: File) => {
+    const photoUrl = URL.createObjectURL(file);
+    setUser((prev) => (prev ? { ...prev, photoUrl } : prev));
+  };
+
+  const value = useMemo(() => ({ user, login, logout, setPhoto }), [user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
