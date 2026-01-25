@@ -41,7 +41,7 @@ export function TopBar() {
         {appLogoUrl ? (
           <img src={appLogoUrl} alt="App logo" className="topbar__logo" />
         ) : (
-          <span className="topbar__logo-text">Ticket CRM</span>
+          <span className="topbar__logo-text">TiMapp</span>
         )}
       </div>
       <div className="topbar__center">
