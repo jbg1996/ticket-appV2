@@ -89,7 +89,7 @@ export function SideBar() {
     localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
   }, [collapsed]);
 
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'admin';
+  const isAdmin = user?.role === 'ADMIN';
 
   const items = useMemo(
     () => [
