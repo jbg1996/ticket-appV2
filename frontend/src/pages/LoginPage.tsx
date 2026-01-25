@@ -1,16 +1,25 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('admin@local.test');
   const [password, setPassword] = useState('Admin123!');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      navigate('/home', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     try {
       await login(email, password);
+      navigate('/home', { replace: true });
     } catch (err) {
       setError((err as Error).message);
     }

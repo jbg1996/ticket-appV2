@@ -23,7 +23,7 @@ function AppShell() {
 
   useEffect(() => {
     if (!user) return;
-    apiFetch<{ value: string }>('/api/settings/header-color')
+    apiFetch<{ value: string }>('/api/settings/header-color', { cache: 'no-store' })
       .then((data) => setHeaderColor(data.value))
       .catch(() => setHeaderColor('#1f2937'));
   }, [user]);

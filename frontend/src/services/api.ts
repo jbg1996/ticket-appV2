@@ -7,7 +7,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  const response = await fetch(`${apiBase}${path}`, { ...options, headers });
+  const response = await fetch(`${apiBase}${path}`, {
+    credentials: 'include',
+    ...options,
+    headers
+  });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ message: 'Request failed.' }));
     throw new Error(errorBody.message ?? 'Request failed.');
@@ -21,7 +25,7 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  const response = await fetch(`${apiBase}${path}`, { method: 'POST', headers, body: formData });
+  const response = await fetch(`${apiBase}${path}`, { method: 'POST', headers, body: formData, credentials: 'include' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ message: 'Upload failed.' }));
     throw new Error(errorBody.message ?? 'Upload failed.');

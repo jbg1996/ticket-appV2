@@ -47,6 +47,8 @@ import { generateReport } from './services/reportService.js';
 
 const app = express();
 
+app.set('etag', false);
+
 await fs.mkdir(env.uploadDir, { recursive: true });
 await fs.mkdir(env.reportDir, { recursive: true });
 
@@ -54,6 +56,13 @@ app.use(cors({ origin: env.frontendUrl, credentials: true }));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
+
+const noStore = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+};
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 
@@ -94,7 +103,7 @@ app.post('/api/auth/login', authLimiter, async (req, res, next) => {
   }
 });
 app.post('/api/auth/logout', logout);
-app.get('/api/auth/me', requireAuth, me);
+app.get('/api/auth/me', noStore, requireAuth, me);
 
 app.get('/api/users', requireAuth, requireRole(['ADMIN']), listUsers);
 app.post('/api/users', requireAuth, requireRole(['ADMIN']), createUser);
@@ -171,7 +180,7 @@ app.post('/api/reports/generate', requireAuth, requireRole(['ADMIN']), generateR
 app.get('/api/reports', requireAuth, requireRole(['ADMIN']), listReports);
 app.get('/api/reports/:id/download', requireAuth, requireRole(['ADMIN']), downloadReport);
 
-app.get('/api/settings/header-color', requireAuth, getHeaderColor);
+app.get('/api/settings/header-color', noStore, requireAuth, getHeaderColor);
 app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateHeaderColor);
 
 app.use(errorHandler);
