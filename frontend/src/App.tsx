@@ -1,13 +1,19 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './components/AuthProvider';
-import { Header } from './components/Header';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TicketsPage } from './pages/TicketsPage';
 import { TicketDetailPage } from './pages/TicketDetailPage';
 import { AdminPage } from './pages/AdminPage';
+import { HomePage } from './pages/HomePage';
+import { RecentTicketsPage } from './pages/RecentTicketsPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { UsersPage } from './pages/UsersPage';
+import { TablesPage } from './pages/TablesPage';
+import { AppSettingsPage } from './pages/AppSettingsPage';
 import { apiFetch } from './services/api';
 import './styles/main.css';
 
@@ -24,41 +30,34 @@ function AppShell() {
 
   return (
     <BrowserRouter>
-      {user && <Header color={headerColor} />}
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <AppLayout initialHeaderColor={headerColor} />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/tickets"
-          element={
-            <ProtectedRoute>
-              <TicketsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tickets/:id"
-          element={
-            <ProtectedRoute>
-              <TicketDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={["ADMIN"]}>
-              <AdminPage />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/recent" element={<RecentTicketsPage />} />
+          <Route path="/tickets" element={<TicketsPage />} />
+          <Route path="/tickets/:id" element={<TicketDetailPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route
+            element={
+              <ProtectedRoute roles={["ADMIN"]}>
+                <Outlet />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/admin/tables" element={<TablesPage />} />
+            <Route path="/admin/app" element={<AppSettingsPage />} />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
   );

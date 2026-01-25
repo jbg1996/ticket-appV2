@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useAuth } from '../components/AuthProvider';
 
 export function LoginPage() {
@@ -7,7 +7,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('Admin123!');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     try {
       await login(email, password);

@@ -73,7 +73,7 @@ export function AdminPage() {
   };
 
   return (
-    <div className="container">
+    <div className="page">
       <h2>Admin</h2>
 
       <div className="card">
