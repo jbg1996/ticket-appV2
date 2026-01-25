@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiFetch, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
@@ -82,7 +82,7 @@ export function TicketDetailPage() {
     loadTicket();
   };
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!id || !event.target.files?.[0]) return;
     const formData = new FormData();
     formData.append('file', event.target.files[0]);
@@ -136,11 +136,11 @@ export function TicketDetailPage() {
   };
 
   if (!ticket) {
-    return <div className="container">Ticket not found.</div>;
+    return <div className="page">Ticket not found.</div>;
   }
 
   return (
-    <div className="container">
+    <div className="page">
       <h2>{ticket.title}</h2>
       <p>{ticket.description}</p>
       <div className="action-row">

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
+import { useLayout } from '../components/AppLayout';
 
 type Ticket = {
   id: string;
@@ -24,6 +25,7 @@ type Status = { id: string; name: string };
 
 export function TicketsPage() {
   const { user } = useAuth();
+  const { ticketSearchQuery } = useLayout();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
@@ -84,8 +86,14 @@ export function TicketsPage() {
   const selectedTypeData = ticketTypes.find((type) => type.id === selectedType);
   const title = selectedTypeData?.name ?? '';
 
+  const filteredTickets = useMemo(() => {
+    const query = ticketSearchQuery.trim().toLowerCase();
+    if (!query) return tickets;
+    return tickets.filter((ticket) => ticket.title.toLowerCase().includes(query));
+  }, [tickets, ticketSearchQuery]);
+
   return (
-    <div className="container">
+    <div className="page">
       <h2>Tickets</h2>
       <div className="grid grid-2">
         <div className="card">
@@ -195,7 +203,12 @@ export function TicketsPage() {
         </div>
       </div>
       <div className="card" style={{ marginTop: '16px' }}>
-        <h3>All Tickets</h3>
+        <div className="card__header">
+          <h3>All Tickets</h3>
+          {ticketSearchQuery.trim() && (
+            <span className="badge">Filtered by “{ticketSearchQuery.trim()}”</span>
+          )}
+        </div>
         <table className="table">
           <thead>
             <tr>
@@ -206,7 +219,7 @@ export function TicketsPage() {
             </tr>
           </thead>
           <tbody>
-            {tickets.map((ticket) => (
+            {filteredTickets.map((ticket) => (
               <tr key={ticket.id}>
                 <td>
                   <Link to={`/tickets/${ticket.id}`}>{ticket.title}</Link>
@@ -216,6 +229,11 @@ export function TicketsPage() {
                 <td>{ticket.ticketType.name}</td>
               </tr>
             ))}
+            {filteredTickets.length === 0 && (
+              <tr>
+                <td colSpan={4}>No tickets match that search.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
