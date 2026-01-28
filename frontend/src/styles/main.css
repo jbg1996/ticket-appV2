@@ -458,6 +458,28 @@ nav a {
   color: #64748b;
 }
 
+.report-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-form__actions {
+  margin-top: 8px;
+}
+
+.table__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .button-link {
   color: #2563eb;
   text-decoration: none;

@@ -48,7 +48,7 @@ export function ReportsPage() {
   };
 
   const handleDelete = async (report: Report) => {
-    if (!confirm('¿Eliminar report?')) return;
+    if (!confirm('Delete this report?')) return;
     setError('');
     try {
       await apiFetch(`/api/reports/${report.id}`, { method: 'DELETE' });
@@ -96,32 +96,45 @@ export function ReportsPage() {
       {isAdmin && (
         <div className="card">
           <h3>Generate report</h3>
-          <div className="form__row">
-            <label className="form__label" htmlFor="preset">
-              Preset
-            </label>
-            <select id="preset" value={preset} onChange={(event) => setPreset(event.target.value as PresetOption)}>
-              <option value="TODAY">Hoy</option>
-              <option value="THIS_MONTH">Este mes</option>
-              <option value="YTD">Año en curso</option>
-              <option value="CUSTOM">Personalizado</option>
-            </select>
-          </div>
-          {preset === 'CUSTOM' ? (
-            <div className="form__row">
-              <label className="form__label" htmlFor="startDate">
-                Inicio
-              </label>
-              <input id="startDate" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-              <label className="form__label" htmlFor="endDate">
-                Fin
-              </label>
-              <input id="endDate" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+          <div className="report-form">
+            <div className="report-form__fields">
+              <div className="form__row">
+                <div className="report-form__field">
+                  <label className="form__label" htmlFor="preset">
+                    Preset
+                  </label>
+                  <select id="preset" value={preset} onChange={(event) => setPreset(event.target.value as PresetOption)}>
+                    <option value="TODAY">Hoy</option>
+                    <option value="THIS_MONTH">Este mes</option>
+                    <option value="YTD">Año en curso</option>
+                    <option value="CUSTOM">Personalizado</option>
+                  </select>
+                </div>
+              </div>
+              {preset === 'CUSTOM' ? (
+                <div className="form__row">
+                  <label className="form__label" htmlFor="startDate">
+                    Inicio
+                  </label>
+                  <input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                  />
+                  <label className="form__label" htmlFor="endDate">
+                    Fin
+                  </label>
+                  <input id="endDate" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                </div>
+              ) : null}
             </div>
-          ) : null}
-          <button className="button button--primary" onClick={handleGenerate} disabled={!canSubmit || loading}>
-            {loading ? 'Generating...' : 'Generate'}
-          </button>
+            <div className="report-form__actions">
+              <button className="button button--primary" onClick={handleGenerate} disabled={!canSubmit || loading}>
+                {loading ? 'Generating...' : 'Create Report'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
       <div className="card">
@@ -148,14 +161,16 @@ export function ReportsPage() {
                   <td>{new Date(report.createdAt).toLocaleString()}</td>
                   <td>{report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : 'N/A'}</td>
                   <td>
-                    <button className="button-link" onClick={() => handleDownload(report)}>
-                      Download
-                    </button>
-                    {isAdmin ? (
-                      <button className="button-link" onClick={() => handleDelete(report)}>
-                        Delete
+                    <div className="table__actions">
+                      <button className="button-link" type="button" onClick={() => handleDownload(report)}>
+                        Download
                       </button>
-                    ) : null}
+                      {isAdmin ? (
+                        <button className="button-link" type="button" onClick={() => handleDelete(report)}>
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
