@@ -1,12 +1,20 @@
 const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+function buildAuthHeaders(existing?: HeadersInit, hasJsonBody?: boolean) {
   const token = localStorage.getItem('token');
-  const headers = new Headers(options.headers ?? {});
-  headers.set('Content-Type', 'application/json');
+  const headers = new Headers(existing ?? {});
+  if (hasJsonBody) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+  return headers;
+}
+
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const hasJsonBody = typeof options.body === 'string';
+  const headers = buildAuthHeaders(options.headers, hasJsonBody);
   const response = await fetch(`${apiBase}${path}`, {
     credentials: 'include',
     ...options,
@@ -27,11 +35,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 }
 
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
-  const token = localStorage.getItem('token');
-  const headers = new Headers();
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  const headers = buildAuthHeaders();
   const response = await fetch(`${apiBase}${path}`, { method: 'POST', headers, body: formData, credentials: 'include' });
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({ message: 'Upload failed.' }));
@@ -41,11 +45,8 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
 }
 
 export async function apiFetchBlob(path: string, options: RequestInit = {}): Promise<Blob> {
-  const token = localStorage.getItem('token');
-  const headers = new Headers(options.headers ?? {});
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  const hasJsonBody = typeof options.body === 'string';
+  const headers = buildAuthHeaders(options.headers, hasJsonBody);
   const response = await fetch(`${apiBase}${path}`, {
     credentials: 'include',
     ...options,
