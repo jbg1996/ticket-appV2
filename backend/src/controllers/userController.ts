@@ -7,6 +7,18 @@ export async function listUsers(_req: Request, res: Response) {
   res.json(users);
 }
 
+export async function listUserSummaries(_req: Request, res: Response) {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      userType: { select: { name: true, code: true } }
+    }
+  });
+  res.json(users);
+}
+
 export async function createUser(req: Request, res: Response) {
   const { firstName, lastName, email, password, phone, userTypeId } = req.body as {
     firstName: string;

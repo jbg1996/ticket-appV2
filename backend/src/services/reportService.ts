@@ -34,7 +34,7 @@ export async function generateReport(periodType: 'DAILY' | 'WEEKLY' | 'MONTHLY')
         lte: periodEnd
       }
     },
-    include: { status: true, priority: true, ticketType: true, creator: true, assignee: true }
+    include: { status: true, priority: true, ticketType: true, createdBy: true, assignedTo: true }
   });
 
   const statusCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
@@ -85,8 +85,8 @@ export async function generateReport(periodType: 'DAILY' | 'WEEKLY' | 'MONTHLY')
       ticket.status.name,
       ticket.priority.name,
       ticket.ticketType.name,
-      `${ticket.creator.firstName} ${ticket.creator.lastName}`,
-      ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : 'Unassigned',
+      `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}`,
+      ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned',
       ticket.title,
       resolutionHours ? resolutionHours.toFixed(2) : 'N/A'
     ]);

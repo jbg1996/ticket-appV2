@@ -1,18 +1,29 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import path from 'path';
 import prisma from '../prisma/client.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { addHistory } from '../services/historyService.js';
 import { env } from '../config/env.js';
 
+function parseTicketId(id: string): number | null {
+  const parsed = Number(id);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
 export async function uploadAttachment(req: AuthRequest, res: Response) {
   if (!req.user || !req.file) {
     return res.status(400).json({ message: 'Missing attachment.' });
   }
-  const { id } = req.params;
+  const parsedId = parseTicketId(req.params.id);
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid ticket id.' });
+  }
   const attachment = await prisma.attachment.create({
     data: {
-      ticketId: id,
+      ticketId: parsedId,
       uploaderId: req.user.id,
       originalName: req.file.originalname,
       storagePath: req.file.path,
@@ -21,7 +32,7 @@ export async function uploadAttachment(req: AuthRequest, res: Response) {
     }
   });
   await addHistory({
-    ticketId: id,
+    ticketId: parsedId,
     actorId: req.user.id,
     eventType: 'ATTACHMENT_ADDED',
     message: attachment.originalName
@@ -39,7 +50,7 @@ export async function downloadAttachment(req: AuthRequest, res: Response) {
     return res.status(404).json({ message: 'Attachment not found.' });
   }
   const ticket = attachment.ticket;
-  const isAllowed = ticket.creatorId === req.user.id || ticket.assigneeId === req.user.id || req.user.role === 'ADMIN';
+  const isAllowed = ticket.createdById === req.user.id || ticket.assignedToId === req.user.id || req.user.role === 'ADMIN';
   if (!isAllowed) {
     return res.status(403).json({ message: 'Forbidden.' });
   }

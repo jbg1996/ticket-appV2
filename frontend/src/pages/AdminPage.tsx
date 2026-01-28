@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiFetchBlob } from '../services/api';
 
 type User = { id: string; firstName: string; lastName: string; email: string; isActive: boolean; userType: { name: string } };
 
@@ -20,7 +20,6 @@ export function AdminPage() {
   const [ticketTypes, setTicketTypes] = useState<CatalogItem[]>([]);
   const [priorities, setPriorities] = useState<CatalogItem[]>([]);
   const [statuses, setStatuses] = useState<CatalogItem[]>([]);
-  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
   const [newStatus, setNewStatus] = useState({ name: '', sortOrder: 1 });
   const [newPriority, setNewPriority] = useState({ name: '', color: '#2563eb' });
   const [newTicketType, setNewTicketType] = useState({ name: '', description: '', defaultPriorityId: '' });
@@ -70,6 +69,16 @@ export function AdminPage() {
     await apiFetch('/api/catalog/ticket-types', { method: 'POST', body: JSON.stringify(newTicketType) });
     setNewTicketType({ name: '', description: '', defaultPriorityId: '' });
     loadAll();
+  };
+
+  const handleDownloadReport = async (report: Report) => {
+    const blob = await apiFetchBlob(`/api/reports/${report.id}/download`);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = report.name;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -200,9 +209,9 @@ export function AdminPage() {
         <ul>
           {reports.map((report) => (
             <li key={report.id}>
-              <a href={`${apiBase}/api/reports/${report.id}/download`} target="_blank" rel="noreferrer">
+              <button className="button-link" onClick={() => handleDownloadReport(report)}>
                 {report.name}
-              </a>
+              </button>
             </li>
           ))}
         </ul>

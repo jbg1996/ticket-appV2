@@ -9,9 +9,9 @@ import fs from 'fs/promises';
 import { z } from 'zod';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { requireAuth, requireRole } from './middleware/auth.js';
+import { requireAuth, requireAdminRole, requireRole } from './middleware/auth.js';
 import { login, logout, me } from './controllers/authController.js';
-import { listUsers, createUser, updateUser, disableUser, deleteUser } from './controllers/userController.js';
+import { listUsers, listUserSummaries, createUser, updateUser, disableUser, deleteUser } from './controllers/userController.js';
 import "dotenv/config";
 import {
   listUserTypes,
@@ -30,6 +30,8 @@ import {
 } from './controllers/catalogController.js';
 import {
   listTickets,
+  searchTickets,
+  listRecentTickets,
   createTicket,
   getTicket,
   updateTicket,
@@ -105,6 +107,8 @@ app.post('/api/auth/login', authLimiter, async (req, res, next) => {
 app.post('/api/auth/logout', logout);
 app.get('/api/auth/me', noStore, requireAuth, me);
 
+app.get('/api/users/summary', requireAuth, listUserSummaries);
+
 app.get('/api/users', requireAuth, requireRole(['ADMIN']), listUsers);
 app.post('/api/users', requireAuth, requireRole(['ADMIN']), createUser);
 app.put('/api/users/:id', requireAuth, requireRole(['ADMIN']), updateUser);
@@ -128,8 +132,10 @@ app.put('/api/catalog/ticket-types/:id', requireAuth, requireRole(['ADMIN']), up
 app.delete('/api/catalog/ticket-types/:id', requireAuth, requireRole(['ADMIN']), deleteTicketType);
 
 app.get('/api/tickets', requireAuth, listTickets);
+app.get('/api/tickets/search', requireAuth, searchTickets);
+app.get('/api/tickets/recent', requireAuth, listRecentTickets);
 app.get('/api/tickets/:id', requireAuth, getTicket);
-app.put('/api/tickets/:id', requireAuth, updateTicket);
+app.put('/api/tickets/:id', requireAuth, requireAdminRole, updateTicket);
 app.post('/api/tickets', requireAuth, async (req, res, next) => {
   try {
     ticketCreateSchema.parse(req.body);
@@ -171,7 +177,7 @@ app.post('/api/tickets/:id/comment', requireAuth, async (req, res, next) => {
     next(error as Error);
   }
 });
-app.delete('/api/tickets/:id', requireAuth, requireRole(['ADMIN']), deleteTicket);
+app.delete('/api/tickets/:id', requireAuth, requireAdminRole, deleteTicket);
 
 app.post('/api/tickets/:id/attachments', requireAuth, upload.single('file'), uploadAttachment);
 app.get('/api/attachments/:id/download', requireAuth, downloadAttachment);

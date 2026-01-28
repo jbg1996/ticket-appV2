@@ -1,17 +1,26 @@
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../services/api';
+import { apiFetch, apiFetchBlob } from '../services/api';
 
 type Report = { id: string; name: string; createdAt: string };
 
 export function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
-  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
   useEffect(() => {
     apiFetch<Report[]>('/api/reports')
       .then(setReports)
       .catch(() => setReports([]));
   }, []);
+
+  const handleDownload = async (report: Report) => {
+    const blob = await apiFetchBlob(`/api/reports/${report.id}/download`);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = report.name;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="page">
@@ -25,9 +34,9 @@ export function ReportsPage() {
             {reports.map((report) => (
               <li key={report.id} className="list__item">
                 <span>{report.name}</span>
-                <a className="button-link" href={`${apiBase}/api/reports/${report.id}/download`}>
+                <button className="button-link" onClick={() => handleDownload(report)}>
                   Download
-                </a>
+                </button>
               </li>
             ))}
           </ul>

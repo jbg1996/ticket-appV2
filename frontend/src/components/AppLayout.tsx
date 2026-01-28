@@ -8,8 +8,6 @@ const APP_LOGO_STORAGE_KEY = 'appLogoUrl';
 const COMPANY_LOGO_STORAGE_KEY = 'companyLogoUrl';
 
 export type LayoutContextValue = {
-  ticketSearchQuery: string;
-  setTicketSearchQuery: (value: string) => void;
   appLogoUrl: string | null;
   setAppLogoUrl: (value: string | null) => void;
   companyLogoUrl: string | null;
@@ -26,7 +24,6 @@ function getStoredValue(key: string) {
 }
 
 export function AppLayout({ initialHeaderColor }: { initialHeaderColor?: string }) {
-  const [ticketSearchQuery, setTicketSearchQuery] = useState('');
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(() => getStoredValue(APP_LOGO_STORAGE_KEY));
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(() => getStoredValue(COMPANY_LOGO_STORAGE_KEY));
   const [headerColor, setHeaderColor] = useState(() => getStoredValue(HEADER_COLOR_STORAGE_KEY) ?? initialHeaderColor ?? '#1f2937');
@@ -59,8 +56,6 @@ export function AppLayout({ initialHeaderColor }: { initialHeaderColor?: string 
 
   const value = useMemo(
     () => ({
-      ticketSearchQuery,
-      setTicketSearchQuery,
       appLogoUrl,
       setAppLogoUrl,
       companyLogoUrl,
@@ -68,7 +63,7 @@ export function AppLayout({ initialHeaderColor }: { initialHeaderColor?: string 
       headerColor,
       setHeaderColor
     }),
-    [ticketSearchQuery, appLogoUrl, companyLogoUrl, headerColor]
+    [appLogoUrl, companyLogoUrl, headerColor]
   );
 
   return (
