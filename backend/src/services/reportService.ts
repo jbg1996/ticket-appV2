@@ -8,21 +8,17 @@ async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
 }
 
-export async function generateReport(periodType: 'DAILY' | 'WEEKLY' | 'MONTHLY') {
+type ReportPreset = 'TODAY' | 'THIS_MONTH' | 'YTD' | 'CUSTOM' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+type GenerateReportParams = {
+  preset: ReportPreset;
+  rangeStart: Date;
+  rangeEnd: Date;
+  createdById?: string;
+};
+
+export async function generateReport({ preset, rangeStart, rangeEnd, createdById }: GenerateReportParams) {
   const now = new Date();
-  const periodEnd = new Date(now);
-  let periodStart = new Date(now);
-  if (periodType === 'DAILY') {
-    periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-  }
-  if (periodType === 'WEEKLY') {
-    periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7, 0, 0, 0);
-  }
-  if (periodType === 'MONTHLY') {
-    periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
-    periodEnd.setDate(0);
-    periodEnd.setHours(23, 59, 59, 999);
-  }
   const workbook = new ExcelJS.Workbook();
   const summarySheet = workbook.addWorksheet('Summary');
   const detailSheet = workbook.addWorksheet('Details');
@@ -30,8 +26,8 @@ export async function generateReport(periodType: 'DAILY' | 'WEEKLY' | 'MONTHLY')
   const tickets = await prisma.ticket.findMany({
     where: {
       createdAt: {
-        gte: periodStart,
-        lte: periodEnd
+        gte: rangeStart,
+        lte: rangeEnd
       }
     },
     include: { status: true, priority: true, ticketType: true, createdBy: true, assignedTo: true }
@@ -93,15 +89,19 @@ export async function generateReport(periodType: 'DAILY' | 'WEEKLY' | 'MONTHLY')
   });
 
   await ensureDir(env.reportDir);
-  const filename = `report-${periodType.toLowerCase()}-${now.toISOString().split('T')[0]}.xlsx`;
+  const filename = `report-${preset.toLowerCase()}-${now.toISOString().split('T')[0]}.xlsx`;
   const filePath = path.join(env.reportDir, filename);
   await workbook.xlsx.writeFile(filePath);
 
   const report = await prisma.report.create({
     data: {
-      name: filename,
-      periodType,
-      filePath
+      fileName: filename,
+      preset,
+      rangeStart,
+      rangeEnd,
+      filePath,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      createdById: createdById ?? null
     }
   });
 

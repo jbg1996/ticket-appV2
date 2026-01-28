@@ -136,11 +136,16 @@ model InfoResponse {
 }
 
 model Report {
-  id         String   @id @default(cuid())
-  name       String
-  periodType String
-  createdAt  DateTime @default(now())
-  filePath   String
+  id          String   @id @default(cuid())
+  fileName    String
+  preset      String
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  rangeStart  DateTime
+  rangeEnd    DateTime
+  filePath    String
+  mimeType    String
 }
 
 model Setting {

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiFetch, apiUpload } from '../services/api';
+import { apiFetch, apiFetchBlob, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 
 type Ticket = {
@@ -25,7 +25,6 @@ type User = { id: string; firstName: string; lastName: string; isActive: boolean
 export function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
-  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [infoMessage, setInfoMessage] = useState('');
   const [requestedFields, setRequestedFields] = useState('');
@@ -105,12 +104,7 @@ export function TicketDetailPage() {
   };
 
   const handleDownload = async (attachmentId: string, originalName: string) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${apiBase}/api/attachments/${attachmentId}/download`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined
-    });
-    if (!response.ok) return;
-    const blob = await response.blob();
+    const blob = await apiFetchBlob(`/api/attachments/${attachmentId}/download`);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
