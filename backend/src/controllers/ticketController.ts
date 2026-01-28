@@ -131,9 +131,9 @@ export async function searchTickets(req: AuthRequest, res: Response) {
   const tickets = await prisma.ticket.findMany({
     where: {
       OR: [
-        { title: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
-        { code: { contains: query, mode: 'insensitive' } }
+        { title: { contains: query } },
+        { description: { contains: query } },
+        { code: { contains: query } }
       ]
     },
     orderBy: { updatedAt: 'desc' },
