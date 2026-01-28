@@ -40,6 +40,24 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
   return response.json();
 }
 
+export async function apiFetchBlob(path: string, options: RequestInit = {}): Promise<Blob> {
+  const token = localStorage.getItem('token');
+  const headers = new Headers(options.headers ?? {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  const response = await fetch(`${apiBase}${path}`, {
+    credentials: 'include',
+    ...options,
+    headers
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({ message: 'Request failed.' }));
+    throw new Error(errorBody.message ?? 'Request failed.');
+  }
+  return response.blob();
+}
+
 export type CreateUserPayload = {
   firstName: string;
   lastName: string;

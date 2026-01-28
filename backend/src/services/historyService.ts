@@ -7,7 +7,7 @@ export async function addHistory({
   message,
   data
 }: {
-  ticketId: string;
+  ticketId: number;
   actorId: string;
   eventType: string;
   message?: string;
