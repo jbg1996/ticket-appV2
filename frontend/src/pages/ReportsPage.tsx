@@ -99,15 +99,17 @@ export function ReportsPage() {
           <div className="report-form">
             <div className="report-form__fields">
               <div className="form__row">
-                <label className="form__label" htmlFor="preset">
-                  Preset
-                </label>
-                <select id="preset" value={preset} onChange={(event) => setPreset(event.target.value as PresetOption)}>
-                  <option value="TODAY">Hoy</option>
-                  <option value="THIS_MONTH">Este mes</option>
-                  <option value="YTD">Año en curso</option>
-                  <option value="CUSTOM">Personalizado</option>
-                </select>
+                <div className="report-form__field">
+                  <label className="form__label" htmlFor="preset">
+                    Preset
+                  </label>
+                  <select id="preset" value={preset} onChange={(event) => setPreset(event.target.value as PresetOption)}>
+                    <option value="TODAY">Hoy</option>
+                    <option value="THIS_MONTH">Este mes</option>
+                    <option value="YTD">Año en curso</option>
+                    <option value="CUSTOM">Personalizado</option>
+                  </select>
+                </div>
               </div>
               {preset === 'CUSTOM' ? (
                 <div className="form__row">
