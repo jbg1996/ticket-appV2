@@ -43,7 +43,7 @@ import {
   addComment
 } from './controllers/ticketController.js';
 import { uploadAttachment, downloadAttachment } from './controllers/attachmentController.js';
-import { generateReportHandler, listReports, downloadReport } from './controllers/reportController.js';
+import { generateReportHandler, listReports, downloadReport, deleteReport } from './controllers/reportController.js';
 import { getHeaderColor, updateHeaderColor } from './controllers/settingsController.js';
 import { generateReport } from './services/reportService.js';
 
@@ -182,9 +182,11 @@ app.delete('/api/tickets/:id', requireAuth, requireAdminRole, deleteTicket);
 app.post('/api/tickets/:id/attachments', requireAuth, upload.single('file'), uploadAttachment);
 app.get('/api/attachments/:id/download', requireAuth, downloadAttachment);
 
-app.post('/api/reports/generate', requireAuth, requireRole(['ADMIN']), generateReportHandler);
-app.get('/api/reports', requireAuth, requireRole(['ADMIN']), listReports);
-app.get('/api/reports/:id/download', requireAuth, requireRole(['ADMIN']), downloadReport);
+app.post('/api/reports', requireAuth, requireAdminRole, generateReportHandler);
+app.post('/api/reports/generate', requireAuth, requireAdminRole, generateReportHandler);
+app.get('/api/reports', requireAuth, requireAdminRole, listReports);
+app.delete('/api/reports/:id', requireAuth, requireAdminRole, deleteReport);
+app.get('/api/reports/:id/download', noStore, requireAuth, requireAdminRole, downloadReport);
 
 app.get('/api/settings/header-color', noStore, requireAuth, getHeaderColor);
 app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateHeaderColor);
@@ -195,16 +197,24 @@ const server = app.listen(env.port, () => {
   console.log(`Server running on http://localhost:${env.port}`);
 });
 
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+
 cron.schedule('55 23 * * *', async () => {
-  await generateReport('DAILY');
+  const now = new Date();
+  await generateReport({ preset: 'DAILY', rangeStart: startOfDay(now), rangeEnd: endOfDay(now) });
 });
 
 cron.schedule('55 23 * * 0', async () => {
-  await generateReport('WEEKLY');
+  const now = new Date();
+  const rangeStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7));
+  await generateReport({ preset: 'WEEKLY', rangeStart, rangeEnd: endOfDay(now) });
 });
 
 cron.schedule('10 0 1 * *', async () => {
-  await generateReport('MONTHLY');
+  const now = new Date();
+  const rangeStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  await generateReport({ preset: 'MONTHLY', rangeStart, rangeEnd: endOfDay(now) });
 });
 
 process.on('SIGTERM', () => {
