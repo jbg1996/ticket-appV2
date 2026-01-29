@@ -34,6 +34,7 @@ model User {
   history        TicketHistory[] @relation("Actor")
   infoRequests   InfoRequest[] @relation("RequesterTech")
   infoResponses  InfoResponse[] @relation("Responder")
+  reports        Report[]
 }
 
 model TicketType {
@@ -136,11 +137,24 @@ model InfoResponse {
 }
 
 model Report {
-  id         String   @id @default(cuid())
-  name       String
-  periodType String
-  createdAt  DateTime @default(now())
-  filePath   String
+  id          String   @id @default(cuid())
+  fileName    String?
+  preset      String
+  status      ReportStatus @default(PENDING)
+  errorMessage String?
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  rangeStart  DateTime
+  rangeEnd    DateTime
+  filePath    String?
+  mimeType    String?
+}
+
+enum ReportStatus {
+  PENDING
+  READY
+  FAILED
 }
 
 model Setting {
