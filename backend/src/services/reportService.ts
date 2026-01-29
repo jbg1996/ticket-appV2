@@ -20,7 +20,6 @@ type GenerateReportParams = {
 export async function generateReport({ preset, rangeStart, rangeEnd, createdById }: GenerateReportParams) {
   const now = new Date();
   const workbook = new ExcelJS.Workbook();
-  const summarySheet = workbook.addWorksheet('Summary');
   const detailSheet = workbook.addWorksheet('Details');
 
   const tickets = await prisma.ticket.findMany({
@@ -30,62 +29,33 @@ export async function generateReport({ preset, rangeStart, rangeEnd, createdById
         lte: rangeEnd
       }
     },
-    include: { status: true, priority: true, ticketType: true, createdBy: true, assignedTo: true }
+    select: {
+      createdAt: true,
+      description: true,
+      title: true,
+      priority: { select: { name: true } },
+      status: { select: { name: true } },
+      ticketType: { select: { name: true } }
+    }
   });
 
-  const statusCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
-    acc[ticket.status.name] = (acc[ticket.status.name] ?? 0) + 1;
-    return acc;
-  }, {});
-  const priorityCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
-    acc[ticket.priority.name] = (acc[ticket.priority.name] ?? 0) + 1;
-    return acc;
-  }, {});
-  const typeCounts = tickets.reduce<Record<string, number>>((acc, ticket) => {
-    acc[ticket.ticketType.name] = (acc[ticket.ticketType.name] ?? 0) + 1;
-    return acc;
-  }, {});
-  const resolutionTimes = tickets
-    .filter((ticket) => ticket.resolvedAt)
-    .map((ticket) => (ticket.resolvedAt!.getTime() - ticket.createdAt.getTime()) / (1000 * 60 * 60));
-  const avgResolution = resolutionTimes.length
-    ? resolutionTimes.reduce((acc, value) => acc + value, 0) / resolutionTimes.length
-    : 0;
-
-  summarySheet.addRow(['Metric', 'Value']);
-  Object.entries(statusCounts).forEach(([key, value]) => summarySheet.addRow([`Status: ${key}`, value]));
-  Object.entries(priorityCounts).forEach(([key, value]) => summarySheet.addRow([`Priority: ${key}`, value]));
-  Object.entries(typeCounts).forEach(([key, value]) => summarySheet.addRow([`Type: ${key}`, value]));
-  summarySheet.addRow(['Avg Resolution Hours', avgResolution.toFixed(2)]);
-
-  detailSheet.addRow([
-    'ID',
-    'Created At',
-    'Updated At',
-    'Status',
-    'Priority',
-    'Type',
-    'Creator',
-    'Assignee',
-    'Title',
-    'Resolution Hours'
-  ]);
+  detailSheet.columns = [
+    { header: 'Type', key: 'type' },
+    { header: 'Title', key: 'title' },
+    { header: 'Description', key: 'description' },
+    { header: 'Status', key: 'status' },
+    { header: 'Priority', key: 'priority' },
+    { header: 'Created At', key: 'createdAt' }
+  ];
   tickets.forEach((ticket) => {
-    const resolutionHours = ticket.resolvedAt
-      ? (ticket.resolvedAt.getTime() - ticket.createdAt.getTime()) / (1000 * 60 * 60)
-      : null;
-    detailSheet.addRow([
-      ticket.id,
-      ticket.createdAt,
-      ticket.updatedAt,
-      ticket.status.name,
-      ticket.priority.name,
-      ticket.ticketType.name,
-      `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}`,
-      ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned',
-      ticket.title,
-      resolutionHours ? resolutionHours.toFixed(2) : 'N/A'
-    ]);
+    detailSheet.addRow({
+      type: ticket.ticketType.name,
+      title: ticket.title,
+      description: ticket.description,
+      status: ticket.status.name,
+      priority: ticket.priority.name,
+      createdAt: ticket.createdAt
+    });
   });
 
   await ensureDir(env.reportDir);
