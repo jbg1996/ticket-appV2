@@ -82,6 +82,10 @@ button.secondary {
   color: #1e293b;
 }
 
+button.danger {
+  background: #dc2626;
+}
+
 input, select, textarea {
   width: 100%;
   padding: 8px 10px;
@@ -164,14 +168,73 @@ nav a {
   justify-content: center;
 }
 
-.topbar__search {
+.topbar__search-wrapper {
+  position: relative;
   width: min(600px, 100%);
+}
+
+.topbar__search {
+  width: 100%;
   background: #ffffff;
   border-radius: 999px;
   border: none;
   padding: 10px 16px;
   font-size: 14px;
   max-width: 100%;
+}
+
+.topbar__search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+  z-index: 30;
+}
+
+.topbar__search-results ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.topbar__search-results li button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.topbar__search-results li button:hover {
+  background: #f1f5f9;
+}
+
+.topbar__search-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.topbar__search-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.topbar__search-empty {
+  padding: 12px;
+  color: #64748b;
+  font-size: 14px;
 }
 
 .topbar__right {
@@ -381,15 +444,56 @@ nav a {
   background: #f8fafc;
 }
 
+.list__item--link {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.list__item--link:hover {
+  background: #e2e8f0;
+}
+
 .list__meta {
   font-size: 12px;
   color: #64748b;
+}
+
+.report-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-form__actions {
+  margin-top: 8px;
+}
+
+.table__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .button-link {
   color: #2563eb;
   text-decoration: none;
   font-weight: 500;
+}
+
+button.button-link {
+  background: transparent;
+  padding: 0;
+  color: #2563eb;
+}
+
+button.button-link:hover {
+  text-decoration: underline;
 }
 
 .hero-logo {
@@ -471,4 +575,9 @@ nav a {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.form-error {
+  color: #dc2626;
+  font-size: 13px;
 }

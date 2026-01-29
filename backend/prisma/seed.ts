@@ -27,7 +27,7 @@ async function main() {
     userTypes.map((type) => prisma.userType.create({ data: type }))
   );
 
-  const priorities = await prisma.priority.createMany({
+  await prisma.priority.createMany({
     data: [
       { name: 'Baja', color: '#16a34a' },
       { name: 'Media', color: '#2563eb' },
@@ -92,20 +92,48 @@ async function main() {
   });
 
   const adminType = createdUserTypes.find((type) => type.code === 'ADMIN');
+  const techType = createdUserTypes.find((type) => type.code === 'TECH');
+  const requesterType = createdUserTypes.find((type) => type.code === 'REQUESTER');
   const passwordHash = await bcrypt.hash('Admin123!', 10);
 
-  if (adminType) {
-    await prisma.user.create({
-      data: {
-        firstName: 'Admin',
-        lastName: 'User',
-        email: 'admin@local.test',
-        passwordHash,
-        userTypeId: adminType.id,
-        isActive: true
-      }
-    });
-  }
+  const [adminUser, techUser, requesterUser] = await Promise.all([
+    adminType
+      ? prisma.user.create({
+          data: {
+            firstName: 'Admin',
+            lastName: 'User',
+            email: 'admin@local.test',
+            passwordHash,
+            userTypeId: adminType.id,
+            isActive: true
+          }
+        })
+      : null,
+    techType
+      ? prisma.user.create({
+          data: {
+            firstName: 'Tania',
+            lastName: 'Tech',
+            email: 'tech@local.test',
+            passwordHash,
+            userTypeId: techType.id,
+            isActive: true
+          }
+        })
+      : null,
+    requesterType
+      ? prisma.user.create({
+          data: {
+            firstName: 'Rafa',
+            lastName: 'Requester',
+            email: 'requester@local.test',
+            passwordHash,
+            userTypeId: requesterType.id,
+            isActive: true
+          }
+        })
+      : null
+  ]);
 
   await prisma.setting.create({
     data: {
@@ -114,7 +142,46 @@ async function main() {
     }
   });
 
-  console.log('Seed data created', priorities);
+  const statusRecords = await prisma.status.findMany();
+  const ticketTypes = await prisma.ticketType.findMany();
+
+  const getStatusId = (name: string) => statusRecords.find((status) => status.name === name)?.id ?? statusRecords[0].id;
+  const getTypeId = (name: string) => ticketTypes.find((type) => type.name === name)?.id ?? ticketTypes[0].id;
+
+  if (adminUser && requesterUser) {
+    await prisma.ticket.createMany({
+      data: [
+        {
+          title: 'No puedo acceder al correo',
+          description: 'Desde esta mañana aparece un error 403 al entrar en el webmail.',
+          ticketTypeId: getTypeId('ACCESO'),
+          priorityId: getPriorityId('Alta'),
+          statusId: getStatusId('Nuevo'),
+          createdById: requesterUser.id
+        },
+        {
+          title: 'Solicitud de software de diseño',
+          description: 'Necesito instalar la última versión de la suite de diseño para el equipo.',
+          ticketTypeId: getTypeId('SOFTWARE'),
+          priorityId: getPriorityId('Media'),
+          statusId: getStatusId('En espera'),
+          createdById: requesterUser.id,
+          assignedToId: techUser?.id ?? null
+        },
+        {
+          title: 'Portátil con pantalla en negro',
+          description: 'El equipo no enciende, la pantalla se queda en negro.',
+          ticketTypeId: getTypeId('HARDWARE'),
+          priorityId: getPriorityId('Crítica'),
+          statusId: getStatusId('En progreso'),
+          createdById: requesterUser.id,
+          assignedToId: techUser?.id ?? null
+        }
+      ]
+    });
+  }
+
+  console.log('Seed data created');
 }
 
 main()

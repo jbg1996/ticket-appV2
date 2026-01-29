@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '../services/api';
 
 type Ticket = {
-  id: string;
+  id: number;
   title: string;
   status: { name: string };
   priority: { name: string };
