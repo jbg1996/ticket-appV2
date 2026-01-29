@@ -7,6 +7,8 @@ export interface AuthRequest extends Request {
   user?: { id: string; role: string };
 }
 
+export const ADMIN_ROLES = ['ADMIN'];
+
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -36,4 +38,14 @@ export function requireRole(roles: string[]) {
     }
     return next();
   };
+}
+
+export function requireAdminRole(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Missing authorization header.' });
+  }
+  if (!ADMIN_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ message: 'Forbidden.' });
+  }
+  return next();
 }

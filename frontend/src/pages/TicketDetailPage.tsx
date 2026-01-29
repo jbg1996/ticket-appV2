@@ -1,28 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiFetch, apiUpload } from '../services/api';
+import { apiFetch, apiFetchBlob, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 
 type Ticket = {
-  id: string;
+  id: number;
   title: string;
   description: string;
   status: { id: string; name: string };
   priority: { id: string; name: string };
   ticketType: { name: string };
-  assignee?: { firstName: string; lastName: string } | null;
+  assignedTo?: { firstName: string; lastName: string } | null;
   attachments: { id: string; originalName: string }[];
   history: { id: string; eventType: string; message?: string; createdAt: string; actor: { firstName: string; lastName: string } }[];
   infoRequests: { id: string; message: string; status: string; requesterTech: { firstName: string; lastName: string }; responses: { id: string; message: string; responder: { firstName: string; lastName: string } }[] }[];
 };
 
 type Status = { id: string; name: string };
+
+type Priority = { id: string; name: string };
+
 type User = { id: string; firstName: string; lastName: string; isActive: boolean; userType: { name: string } };
 
 export function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
-  const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [infoMessage, setInfoMessage] = useState('');
   const [requestedFields, setRequestedFields] = useState('');
@@ -30,13 +32,23 @@ export function TicketDetailPage() {
   const [responseFile, setResponseFile] = useState<File | null>(null);
   const [comment, setComment] = useState('');
   const [statuses, setStatuses] = useState<Status[]>([]);
+  const [priorities, setPriorities] = useState<Priority[]>([]);
   const [assignees, setAssignees] = useState<User[]>([]);
   const [selectedStatusId, setSelectedStatusId] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPriorityId, setEditPriorityId] = useState('');
+  const [adminError, setAdminError] = useState('');
+
+  const isAdmin = user?.role === 'ADMIN';
 
   const loadTicket = () => {
     apiFetch<Ticket>(`/api/tickets/${id}`)
-      .then(setTicket)
+      .then((data) => {
+        setTicket(data);
+        setEditDescription(data.description);
+        setEditPriorityId(data.priority.id);
+      })
       .catch(() => setTicket(null));
   };
 
@@ -46,12 +58,13 @@ export function TicketDetailPage() {
 
   useEffect(() => {
     apiFetch<Status[]>('/api/catalog/statuses').then(setStatuses);
-    if (user?.role === 'ADMIN') {
+    apiFetch<Priority[]>('/api/catalog/priorities').then(setPriorities);
+    if (isAdmin) {
       apiFetch<User[]>('/api/users').then((users) =>
         setAssignees(users.filter((candidate) => candidate.isActive && candidate.userType.name === 'Técnico'))
       );
     }
-  }, [user]);
+  }, [isAdmin]);
 
   const handleRequestInfo = async () => {
     if (!id) return;
@@ -82,7 +95,7 @@ export function TicketDetailPage() {
     loadTicket();
   };
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!id || !event.target.files?.[0]) return;
     const formData = new FormData();
     formData.append('file', event.target.files[0]);
@@ -91,12 +104,7 @@ export function TicketDetailPage() {
   };
 
   const handleDownload = async (attachmentId: string, originalName: string) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${apiBase}/api/attachments/${attachmentId}/download`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined
-    });
-    if (!response.ok) return;
-    const blob = await response.blob();
+    const blob = await apiFetchBlob(`/api/attachments/${attachmentId}/download`);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -135,20 +143,76 @@ export function TicketDetailPage() {
     loadTicket();
   };
 
+  const handleAdminUpdate = async () => {
+    if (!id) return;
+    setAdminError('');
+    try {
+      await apiFetch(`/api/tickets/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          description: editDescription,
+          priorityId: editPriorityId
+        })
+      });
+      loadTicket();
+    } catch (error) {
+      setAdminError('No autorizado');
+    }
+  };
+
+  const handleAdminDelete = async () => {
+    if (!id) return;
+    setAdminError('');
+    if (!window.confirm('Are you sure you want to delete this ticket?')) return;
+    try {
+      await apiFetch(`/api/tickets/${id}`, { method: 'DELETE' });
+      window.location.href = '/tickets';
+    } catch {
+      setAdminError('No autorizado');
+    }
+  };
+
   if (!ticket) {
-    return <div className="container">Ticket not found.</div>;
+    return <div className="page">Ticket not found.</div>;
   }
 
   return (
-    <div className="container">
+    <div className="page">
       <h2>{ticket.title}</h2>
       <p>{ticket.description}</p>
       <div className="action-row">
         <span className="badge">{ticket.status.name}</span>
         <span className="badge">{ticket.priority.name}</span>
         <span className="badge">{ticket.ticketType.name}</span>
-        <span className="badge">Assignee: {ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : 'Unassigned'}</span>
+        <span className="badge">Assignee: {ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned'}</span>
       </div>
+
+      {isAdmin && (
+        <div className="card" style={{ marginTop: '16px' }}>
+          <h3>Admin Edit</h3>
+          <div className="grid">
+            <label>
+              Description
+              <textarea rows={3} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+            </label>
+            <label>
+              Priority
+              <select value={editPriorityId} onChange={(event) => setEditPriorityId(event.target.value)}>
+                {priorities.map((priority) => (
+                  <option key={priority.id} value={priority.id}>
+                    {priority.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="action-row">
+              <button onClick={handleAdminUpdate}>Save Changes</button>
+              <button className="danger" onClick={handleAdminDelete}>Delete Ticket</button>
+            </div>
+            {adminError && <p className="form-error">{adminError}</p>}
+          </div>
+        </div>
+      )}
 
       <div className="card" style={{ marginTop: '16px' }}>
         <h3>Attachments</h3>
@@ -183,7 +247,7 @@ export function TicketDetailPage() {
               <button onClick={handleStatusChange}>Update Status</button>
             </>
           )}
-          {user?.role === 'ADMIN' && (
+          {isAdmin && (
             <>
               <label>
                 Assign to Tech

@@ -9,9 +9,9 @@ import fs from 'fs/promises';
 import { z } from 'zod';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { requireAuth, requireRole } from './middleware/auth.js';
+import { requireAuth, requireAdminRole, requireRole } from './middleware/auth.js';
 import { login, logout, me } from './controllers/authController.js';
-import { listUsers, createUser, updateUser, disableUser, deleteUser } from './controllers/userController.js';
+import { listUsers, listUserSummaries, createUser, updateUser, disableUser, deleteUser } from './controllers/userController.js';
 import "dotenv/config";
 import {
   listUserTypes,
@@ -30,6 +30,8 @@ import {
 } from './controllers/catalogController.js';
 import {
   listTickets,
+  searchTickets,
+  listRecentTickets,
   createTicket,
   getTicket,
   updateTicket,
@@ -41,11 +43,13 @@ import {
   addComment
 } from './controllers/ticketController.js';
 import { uploadAttachment, downloadAttachment } from './controllers/attachmentController.js';
-import { generateReportHandler, listReports, downloadReport } from './controllers/reportController.js';
+import { generateReportHandler, listReports, downloadReport, deleteReport } from './controllers/reportController.js';
 import { getHeaderColor, updateHeaderColor } from './controllers/settingsController.js';
 import { generateReport } from './services/reportService.js';
 
 const app = express();
+
+app.set('etag', false);
 
 await fs.mkdir(env.uploadDir, { recursive: true });
 await fs.mkdir(env.reportDir, { recursive: true });
@@ -54,6 +58,13 @@ app.use(cors({ origin: env.frontendUrl, credentials: true }));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
+
+const noStore = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+};
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 
@@ -94,7 +105,9 @@ app.post('/api/auth/login', authLimiter, async (req, res, next) => {
   }
 });
 app.post('/api/auth/logout', logout);
-app.get('/api/auth/me', requireAuth, me);
+app.get('/api/auth/me', noStore, requireAuth, me);
+
+app.get('/api/users/summary', requireAuth, listUserSummaries);
 
 app.get('/api/users', requireAuth, requireRole(['ADMIN']), listUsers);
 app.post('/api/users', requireAuth, requireRole(['ADMIN']), createUser);
@@ -119,8 +132,10 @@ app.put('/api/catalog/ticket-types/:id', requireAuth, requireRole(['ADMIN']), up
 app.delete('/api/catalog/ticket-types/:id', requireAuth, requireRole(['ADMIN']), deleteTicketType);
 
 app.get('/api/tickets', requireAuth, listTickets);
+app.get('/api/tickets/search', requireAuth, searchTickets);
+app.get('/api/tickets/recent', requireAuth, listRecentTickets);
 app.get('/api/tickets/:id', requireAuth, getTicket);
-app.put('/api/tickets/:id', requireAuth, updateTicket);
+app.put('/api/tickets/:id', requireAuth, requireAdminRole, updateTicket);
 app.post('/api/tickets', requireAuth, async (req, res, next) => {
   try {
     ticketCreateSchema.parse(req.body);
@@ -162,16 +177,18 @@ app.post('/api/tickets/:id/comment', requireAuth, async (req, res, next) => {
     next(error as Error);
   }
 });
-app.delete('/api/tickets/:id', requireAuth, requireRole(['ADMIN']), deleteTicket);
+app.delete('/api/tickets/:id', requireAuth, requireAdminRole, deleteTicket);
 
 app.post('/api/tickets/:id/attachments', requireAuth, upload.single('file'), uploadAttachment);
 app.get('/api/attachments/:id/download', requireAuth, downloadAttachment);
 
-app.post('/api/reports/generate', requireAuth, requireRole(['ADMIN']), generateReportHandler);
-app.get('/api/reports', requireAuth, requireRole(['ADMIN']), listReports);
-app.get('/api/reports/:id/download', requireAuth, requireRole(['ADMIN']), downloadReport);
+app.post('/api/reports', requireAuth, requireAdminRole, generateReportHandler);
+app.post('/api/reports/generate', requireAuth, requireAdminRole, generateReportHandler);
+app.get('/api/reports', requireAuth, requireAdminRole, listReports);
+app.delete('/api/reports/:id', requireAuth, requireAdminRole, deleteReport);
+app.get('/api/reports/:id/download', noStore, requireAuth, requireAdminRole, downloadReport);
 
-app.get('/api/settings/header-color', requireAuth, getHeaderColor);
+app.get('/api/settings/header-color', noStore, requireAuth, getHeaderColor);
 app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateHeaderColor);
 
 app.use(errorHandler);
@@ -180,16 +197,24 @@ const server = app.listen(env.port, () => {
   console.log(`Server running on http://localhost:${env.port}`);
 });
 
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+
 cron.schedule('55 23 * * *', async () => {
-  await generateReport('DAILY');
+  const now = new Date();
+  await generateReport({ preset: 'DAILY', rangeStart: startOfDay(now), rangeEnd: endOfDay(now) });
 });
 
 cron.schedule('55 23 * * 0', async () => {
-  await generateReport('WEEKLY');
+  const now = new Date();
+  const rangeStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7));
+  await generateReport({ preset: 'WEEKLY', rangeStart, rangeEnd: endOfDay(now) });
 });
 
 cron.schedule('10 0 1 * *', async () => {
-  await generateReport('MONTHLY');
+  const now = new Date();
+  const rangeStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  await generateReport({ preset: 'MONTHLY', rangeStart, rangeEnd: endOfDay(now) });
 });
 
 process.on('SIGTERM', () => {

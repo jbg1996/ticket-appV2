@@ -15,24 +15,26 @@ model UserType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  firstName    String
-  lastName     String
-  email        String   @unique
-  passwordHash String
-  phone        String?
-  imageUrl     String?
-  userTypeId   String
-  userType     UserType @relation(fields: [userTypeId], references: [id])
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  createdTickets Ticket[] @relation("Creator")
-  assignedTickets Ticket[] @relation("Assignee")
-  uploads Attachment[] @relation("Uploader")
-  history TicketHistory[] @relation("Actor")
-  infoRequests InfoRequest[] @relation("RequesterTech")
-  infoResponses InfoResponse[] @relation("Responder")
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String   @unique
+  passwordHash   String
+  phone          String?
+  imageUrl       String?
+  userTypeId     String
+  userType       UserType @relation(fields: [userTypeId], references: [id])
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdTickets Ticket[] @relation("TicketCreator")
+  assignedTickets Ticket[] @relation("TicketAssignee")
+  updatedTickets Ticket[] @relation("TicketUpdater")
+  uploads        Attachment[] @relation("Uploader")
+  history        TicketHistory[] @relation("Actor")
+  infoRequests   InfoRequest[] @relation("RequesterTech")
+  infoResponses  InfoResponse[] @relation("Responder")
+  reports        Report[]
 }
 
 model TicketType {
@@ -61,43 +63,46 @@ model Status {
 }
 
 model Ticket {
-  id          String   @id @default(cuid())
+  id           Int      @id @default(autoincrement())
+  code         String?  @unique
   ticketTypeId String
-  ticketType  TicketType @relation(fields: [ticketTypeId], references: [id])
-  title       String
-  description String
-  priorityId  String
-  priority    Priority @relation(fields: [priorityId], references: [id])
-  statusId    String
-  status      Status   @relation(fields: [statusId], references: [id])
-  creatorId   String
-  creator     User     @relation("Creator", fields: [creatorId], references: [id])
-  assigneeId  String?
-  assignee    User?    @relation("Assignee", fields: [assigneeId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  resolvedAt  DateTime?
-  attachments Attachment[]
-  history     TicketHistory[]
+  ticketType   TicketType @relation(fields: [ticketTypeId], references: [id])
+  title        String
+  description  String
+  priorityId   String
+  priority     Priority @relation(fields: [priorityId], references: [id])
+  statusId     String
+  status       Status   @relation(fields: [statusId], references: [id])
+  createdById  String
+  createdBy    User     @relation("TicketCreator", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?    @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  updatedById  String?
+  updatedBy    User?    @relation("TicketUpdater", fields: [updatedById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  resolvedAt   DateTime?
+  attachments  Attachment[]
+  history      TicketHistory[]
   infoRequests InfoRequest[]
 }
 
 model Attachment {
-  id          String   @id @default(cuid())
-  ticketId    String
-  ticket      Ticket   @relation(fields: [ticketId], references: [id])
-  uploaderId  String
-  uploader    User     @relation("Uploader", fields: [uploaderId], references: [id])
+  id           String   @id @default(cuid())
+  ticketId     Int
+  ticket       Ticket   @relation(fields: [ticketId], references: [id])
+  uploaderId   String
+  uploader     User     @relation("Uploader", fields: [uploaderId], references: [id])
   originalName String
-  storagePath String
-  mimeType    String
-  sizeBytes   Int
-  uploadedAt  DateTime @default(now())
+  storagePath  String
+  mimeType     String
+  sizeBytes    Int
+  uploadedAt   DateTime @default(now())
 }
 
 model TicketHistory {
   id        String   @id @default(cuid())
-  ticketId  String
+  ticketId  Int
   ticket    Ticket   @relation(fields: [ticketId], references: [id])
   actorId   String
   actor     User     @relation("Actor", fields: [actorId], references: [id])
@@ -109,7 +114,7 @@ model TicketHistory {
 
 model InfoRequest {
   id              String   @id @default(cuid())
-  ticketId        String
+  ticketId        Int
   ticket          Ticket   @relation(fields: [ticketId], references: [id])
   requesterTechId String
   requesterTech   User     @relation("RequesterTech", fields: [requesterTechId], references: [id])
@@ -132,11 +137,24 @@ model InfoResponse {
 }
 
 model Report {
-  id         String   @id @default(cuid())
-  name       String
-  periodType String
-  createdAt  DateTime @default(now())
-  filePath   String
+  id          String   @id @default(cuid())
+  fileName    String?
+  preset      String
+  status      ReportStatus @default(PENDING)
+  errorMessage String?
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  rangeStart  DateTime
+  rangeEnd    DateTime
+  filePath    String?
+  mimeType    String?
+}
+
+enum ReportStatus {
+  PENDING
+  READY
+  FAILED
 }
 
 model Setting {
