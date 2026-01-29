@@ -14,10 +14,22 @@ type GenerateReportParams = {
   preset: ReportPreset;
   rangeStart: Date;
   rangeEnd: Date;
-  createdById?: string;
+  fileName?: string;
 };
 
-export async function generateReport({ preset, rangeStart, rangeEnd, createdById }: GenerateReportParams) {
+type GeneratedReport = {
+  fileName: string;
+  filePath: string;
+  mimeType: string;
+  ticketCount: number;
+};
+
+export async function generateReport({
+  preset,
+  rangeStart,
+  rangeEnd,
+  fileName
+}: GenerateReportParams): Promise<GeneratedReport> {
   const now = new Date();
   const workbook = new ExcelJS.Workbook();
   const detailSheet = workbook.addWorksheet('Details');
@@ -59,21 +71,14 @@ export async function generateReport({ preset, rangeStart, rangeEnd, createdById
   });
 
   await ensureDir(env.reportDir);
-  const filename = `report-${preset.toLowerCase()}-${now.toISOString().split('T')[0]}.xlsx`;
-  const filePath = path.join(env.reportDir, filename);
+  const resolvedFileName = fileName ?? `report-${preset.toLowerCase()}-${now.toISOString().split('T')[0]}.xlsx`;
+  const filePath = path.join(env.reportDir, resolvedFileName);
   await workbook.xlsx.writeFile(filePath);
 
-  const report = await prisma.report.create({
-    data: {
-      fileName: filename,
-      preset,
-      rangeStart,
-      rangeEnd,
-      filePath,
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      createdById: createdById ?? null
-    }
-  });
-
-  return report;
+  return {
+    fileName: resolvedFileName,
+    filePath,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ticketCount: tickets.length
+  };
 }

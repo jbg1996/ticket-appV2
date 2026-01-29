@@ -59,13 +59,49 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
   if (!range) {
     return res.status(400).json({ message: 'Invalid date range.' });
   }
-  const report = await generateReport({
-    preset,
-    rangeStart: range.rangeStart,
-    rangeEnd: range.rangeEnd,
-    createdById: req.user.id
+  const fileName = `report-${preset.toLowerCase()}-${new Date().toISOString().split('T')[0]}.xlsx`;
+  const pendingReport = await prisma.report.create({
+    data: {
+      fileName,
+      preset,
+      rangeStart: range.rangeStart,
+      rangeEnd: range.rangeEnd,
+      createdById: req.user.id,
+      status: 'PENDING'
+    }
   });
-  res.status(201).json(report);
+  console.info(`Report generation started`, { reportId: pendingReport.id });
+  try {
+    const reportResult = await generateReport({
+      preset,
+      rangeStart: range.rangeStart,
+      rangeEnd: range.rangeEnd,
+      fileName
+    });
+    console.info(`Report generation ticket count`, { reportId: pendingReport.id, ticketCount: reportResult.ticketCount });
+    const report = await prisma.report.update({
+      where: { id: pendingReport.id },
+      data: {
+        status: 'READY',
+        fileName: reportResult.fileName,
+        filePath: reportResult.filePath,
+        mimeType: reportResult.mimeType,
+        errorMessage: null
+      }
+    });
+    return res.status(201).json(report);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`Report generation failed`, { reportId: pendingReport.id, error });
+    await prisma.report.update({
+      where: { id: pendingReport.id },
+      data: {
+        status: 'FAILED',
+        errorMessage
+      }
+    });
+    return res.status(500).json({ message: 'Report generation failed', error: errorMessage });
+  }
 }
 
 export async function listReports(_req: AuthRequest, res: Response) {
@@ -89,10 +125,20 @@ export async function downloadReport(req: AuthRequest, res: Response) {
   if (!report) {
     return res.status(404).json({ message: 'Report not found.' });
   }
+  console.info(`Report download requested`, { reportId: id, status: report.status });
+  if (report.status === 'PENDING') {
+    return res.status(409).json({ message: 'Report is being generated', status: 'PENDING' });
+  }
+  if (report.status === 'FAILED') {
+    return res.status(500).json({ message: 'Report generation failed', error: report.errorMessage });
+  }
+  if (!report.filePath || !report.fileName || !report.mimeType) {
+    return res.status(500).json({ message: 'Report is not ready for download.' });
+  }
   try {
     await fs.stat(report.filePath);
   } catch {
-    return res.status(404).json({ message: 'Report file missing.' });
+    return res.status(500).json({ message: 'Report file missing.' });
   }
   res.setHeader('Content-Type', report.mimeType);
   res.setHeader('Content-Disposition', `attachment; filename="${report.fileName}"`);
@@ -105,10 +151,12 @@ export async function deleteReport(req: AuthRequest, res: Response) {
   if (!report) {
     return res.status(404).json({ message: 'Report not found.' });
   }
-  try {
-    await fs.unlink(report.filePath);
-  } catch {
-    // Ignore missing files
+  if (report.filePath) {
+    try {
+      await fs.unlink(report.filePath);
+    } catch {
+      // Ignore missing files
+    }
   }
   await prisma.report.delete({ where: { id } });
   return res.status(200).json({ message: 'Report deleted.' });
