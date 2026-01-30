@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, Filter } from 'lucide-react';
+import { ArrowDown, ArrowUp, Filter } from 'lucide-react';
+import { ColumnHeaderTrigger } from './ColumnHeaderTrigger';
 
 export type FilterOperator =
   | 'Equals'
@@ -137,10 +138,7 @@ export function ColumnMenu({
       {renderTrigger ? (
         renderTrigger({ label, onToggle: () => onToggle(columnId), isOpen })
       ) : (
-        <button className="column-menu__trigger" type="button" onClick={() => onToggle(columnId)}>
-          <span>{label}</span>
-          <ChevronDown size={14} />
-        </button>
+        <ColumnHeaderTrigger label={label} onToggle={() => onToggle(columnId)} isOpen={isOpen} />
       )}
       {isOpen && (
         <div className="column-menu__dropdown">
