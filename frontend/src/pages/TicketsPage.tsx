@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
+import { ReportIcon } from '../components/icons/ReportIcon';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
@@ -387,7 +388,7 @@ export function TicketsPage() {
               disabled={actionLoading}
             >
               <span className="btnInner">
-                <FileText size={16} />
+                <ReportIcon size={16} />
                 <span>Report</span>
               </span>
             </button>
