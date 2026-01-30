@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FileText, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
+import { ColumnFilter, ColumnMenu } from '../components/ColumnMenu';
 
 type Ticket = {
   id: number;
@@ -15,350 +17,332 @@ type Ticket = {
   assignedTo?: { id: string; firstName: string; lastName: string } | null;
 };
 
-type TicketType = {
+type SortState = { columnId: string; direction: 'asc' | 'desc' };
+
+type ColumnDefinition = {
   id: string;
-  name: string;
-  description: string;
-  defaultPriorityId: string;
-};
-
-type Priority = { id: string; name: string };
-
-type Status = { id: string; name: string };
-
-type UserSummary = { id: string; firstName: string; lastName: string; userType: { name: string; code: string } };
-
-type FiltersState = {
-  statusId: string;
-  priorityId: string;
-  ticketTypeId: string;
-  assignedToMe: boolean;
-  createdByMe: boolean;
-  createdFrom: string;
-  createdTo: string;
-  updatedFrom: string;
-  updatedTo: string;
-  createdById: string;
-  assignedToId: string;
-  text: string;
-};
-
-const buildDateTime = (value: string, endOfDay = false) => {
-  if (!value) return undefined;
-  const suffix = endOfDay ? 'T23:59:59.999' : 'T00:00:00.000';
-  return new Date(`${value}${suffix}`).toISOString();
+  label: string;
+  accessor: (ticket: Ticket) => string | number | null | undefined;
 };
 
 const formatDate = (value: string) => new Date(value).toLocaleString();
 
 export function TicketsPage() {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
-  const [priorities, setPriorities] = useState<Priority[]>([]);
-  const [statuses, setStatuses] = useState<Status[]>([]);
-  const [users, setUsers] = useState<UserSummary[]>([]);
-  const [selectedType, setSelectedType] = useState('');
-  const [description, setDescription] = useState('');
-  const [title2, setTitle2] = useState('');
-  const [priorityId, setPriorityId] = useState('');
-  const [filters, setFilters] = useState<FiltersState>({
-    statusId: '',
-    priorityId: '',
-    ticketTypeId: '',
-    assignedToMe: false,
-    createdByMe: false,
-    createdFrom: '',
-    createdTo: '',
-    updatedFrom: '',
-    updatedTo: '',
-    createdById: '',
-    assignedToId: '',
-    text: ''
-  });
-
-  const buildParams = () => {
-    const params = new URLSearchParams();
-    if (filters.statusId) params.append('statusId', filters.statusId);
-    if (filters.priorityId) params.append('priorityId', filters.priorityId);
-    if (filters.ticketTypeId) params.append('ticketTypeId', filters.ticketTypeId);
-    if (filters.assignedToMe) params.append('assignedToMe', 'true');
-    if (filters.createdByMe) params.append('createdByMe', 'true');
-    if (filters.createdById) params.append('createdById', filters.createdById);
-    if (filters.assignedToId) params.append('assignedToId', filters.assignedToId);
-    if (filters.text) params.append('text', filters.text);
-
-    const createdFrom = buildDateTime(filters.createdFrom);
-    const createdTo = buildDateTime(filters.createdTo, true);
-    const updatedFrom = buildDateTime(filters.updatedFrom);
-    const updatedTo = buildDateTime(filters.updatedTo, true);
-    if (createdFrom) params.append('createdFrom', createdFrom);
-    if (createdTo) params.append('createdTo', createdTo);
-    if (updatedFrom) params.append('updatedFrom', updatedFrom);
-    if (updatedTo) params.append('updatedTo', updatedTo);
-
-    return params;
-  };
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [columnFilters, setColumnFilters] = useState<Record<string, ColumnFilter>>({});
+  const [sorting, setSorting] = useState<SortState | null>(null);
+  const [openColumnId, setOpenColumnId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [feedback, setFeedback] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   const loadTickets = () => {
-    const params = buildParams();
-    apiFetch<Ticket[]>(`/api/tickets?${params.toString()}`)
+    apiFetch<Ticket[]>('/api/tickets')
       .then(setTickets)
       .catch(() => setTickets([]));
   };
 
   useEffect(() => {
-    apiFetch<TicketType[]>('/api/catalog/ticket-types').then(setTicketTypes);
-    apiFetch<Priority[]>('/api/catalog/priorities').then(setPriorities);
-    apiFetch<Status[]>('/api/catalog/statuses').then(setStatuses);
-    apiFetch<UserSummary[]>('/api/users/summary').then(setUsers).catch(() => setUsers([]));
     loadTickets();
   }, []);
 
   useEffect(() => {
-    const params = buildParams();
-    if (params.toString() !== searchParams.toString()) {
-      setSearchParams(params, { replace: true });
+    setSelectedIds((prev) => new Set([...prev].filter((id) => tickets.some((ticket) => ticket.id === id))));
+  }, [tickets]);
+
+  const columnDefinitions: ColumnDefinition[] = useMemo(
+    () => [
+      { id: 'title', label: 'Title', accessor: (ticket) => ticket.title },
+      { id: 'status', label: 'Status', accessor: (ticket) => ticket.status?.name },
+      { id: 'priority', label: 'Priority', accessor: (ticket) => ticket.priority?.name },
+      { id: 'type', label: 'Type', accessor: (ticket) => ticket.ticketType?.name },
+      { id: 'createdAt', label: 'Created At', accessor: (ticket) => ticket.createdAt },
+      { id: 'updatedAt', label: 'Updated At', accessor: (ticket) => ticket.updatedAt },
+      {
+        id: 'createdBy',
+        label: 'Created By',
+        accessor: (ticket) => (ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : '')
+      },
+      {
+        id: 'assignedTo',
+        label: 'Assigned To',
+        accessor: (ticket) => (ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : '')
+      }
+    ],
+    []
+  );
+
+  const columnMap = useMemo(
+    () => columnDefinitions.reduce((acc, column) => ({ ...acc, [column.id]: column }), {} as Record<string, ColumnDefinition>),
+    [columnDefinitions]
+  );
+
+  const globalSearchFields = useMemo(
+    () => [
+      (ticket: Ticket) => ticket.title,
+      (ticket: Ticket) => ticket.ticketType?.description ?? '',
+      (ticket: Ticket) => ticket.status?.name ?? '',
+      (ticket: Ticket) => ticket.priority?.name ?? '',
+      (ticket: Ticket) => ticket.ticketType?.name ?? '',
+      (ticket: Ticket) => (ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : ''),
+      (ticket: Ticket) => (ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : '')
+    ],
+    []
+  );
+
+  const normalizeValue = (value: string | number | null | undefined) => (value ?? '').toString().toLowerCase();
+
+  const matchesFilter = (value: string | number | null | undefined, filter: ColumnFilter) => {
+    const normalized = normalizeValue(value);
+    const filterValue = filter.value.toLowerCase();
+    switch (filter.op) {
+      case 'Equals':
+        return normalized === filterValue;
+      case 'Does not equal':
+        return normalized !== filterValue;
+      case 'Contains':
+        return normalized.includes(filterValue);
+      case 'Does not contain':
+        return !normalized.includes(filterValue);
+      case 'Begin with':
+        return normalized.startsWith(filterValue);
+      case 'Does not begin with':
+        return !normalized.startsWith(filterValue);
+      case 'End with':
+        return normalized.endsWith(filterValue);
+      case 'Does not end with':
+        return !normalized.endsWith(filterValue);
+      case 'Contains data':
+        return normalized.trim().length > 0;
+      case 'Does not contain data':
+        return normalized.trim().length === 0;
+      default:
+        return true;
     }
-    loadTickets();
-  }, [filters]);
-
-  useEffect(() => {
-    if (!selectedType) return;
-    const selected = ticketTypes.find((type) => type.id === selectedType);
-    if (!selected) return;
-    setDescription(selected.description);
-    setPriorityId(selected.defaultPriorityId);
-  }, [selectedType, ticketTypes]);
-
-  const handleCreate = async () => {
-    if (!selectedType) return;
-    await apiFetch('/api/tickets', {
-      method: 'POST',
-      body: JSON.stringify({
-        ticketTypeId: selectedType,
-        description,
-        priorityId,
-        title2
-      })
-    });
-    setDescription('');
-    setTitle2('');
-    loadTickets();
   };
 
-  const selectedTypeData = ticketTypes.find((type) => type.id === selectedType);
-  const title = selectedTypeData?.name ?? '';
+  const getSortableValue = (value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'number') return value;
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) return timestamp;
+    return value.toString().toLowerCase();
+  };
 
-  const filteredUsers = useMemo(
-    () =>
-      users.map((userItem) => ({
-        id: userItem.id,
-        name: `${userItem.firstName} ${userItem.lastName}`,
-        role: userItem.userType.code
-      })),
-    [users]
-  );
+  const applyAll = (data: Ticket[]) => {
+    let result = [...data];
+    if (globalSearch.trim()) {
+      const query = globalSearch.toLowerCase();
+      result = result.filter((ticket) =>
+        globalSearchFields.some((field) => normalizeValue(field(ticket)).includes(query))
+      );
+    }
+    Object.entries(columnFilters).forEach(([columnId, filter]) => {
+      const column = columnMap[columnId];
+      if (!column) return;
+      result = result.filter((ticket) => matchesFilter(column.accessor(ticket), filter));
+    });
+    if (sorting) {
+      const column = columnMap[sorting.columnId];
+      if (column) {
+        result.sort((a, b) => {
+          const valueA = getSortableValue(column.accessor(a));
+          const valueB = getSortableValue(column.accessor(b));
+          if (valueA < valueB) return sorting.direction === 'asc' ? -1 : 1;
+          if (valueA > valueB) return sorting.direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+    }
+    return result;
+  };
+
+  const displayTickets = useMemo(() => applyAll(tickets), [tickets, globalSearch, columnFilters, sorting]);
+  const visibleIds = useMemo(() => displayTickets.map((ticket) => ticket.id), [displayTickets]);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const isAdmin = user?.role === 'ADMIN';
+
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    const hasSelection = selectedIds.size > 0;
+    selectAllRef.current.indeterminate = hasSelection && !allVisibleSelected;
+  }, [selectedIds, allVisibleSelected]);
+
+  const handleToggleColumn = (columnId: string) => {
+    setOpenColumnId((prev) => (prev === columnId ? null : columnId));
+  };
+
+  const handleApplyFilter = (columnId: string, filter: ColumnFilter) => {
+    setColumnFilters((prev) => ({ ...prev, [columnId]: filter }));
+  };
+
+  const handleClearFilter = (columnId: string) => {
+    setColumnFilters((prev) => {
+      const next = { ...prev };
+      delete next[columnId];
+      return next;
+    });
+  };
+
+  const handleSort = (columnId: string, direction: 'asc' | 'desc') => {
+    setSorting({ columnId, direction });
+    setOpenColumnId(null);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleSelectRow = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleDelete = async () => {
+    if (!isAdmin || selectedIds.size === 0) return;
+    if (!confirm('Delete the selected tickets?')) return;
+    setActionLoading(true);
+    setFeedback('');
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          apiFetch(`/api/tickets/${id}`, {
+            method: 'DELETE'
+          })
+        )
+      );
+      setSelectedIds(new Set());
+      setFeedback('Tickets deleted.');
+      loadTickets();
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'No se pudieron eliminar los tickets.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReport = async () => {
+    setActionLoading(true);
+    setFeedback('');
+    try {
+      await apiFetch('/api/reports', {
+        method: 'POST',
+        body: JSON.stringify({
+          source: 'tickets',
+          search: globalSearch,
+          sorting,
+          filters: columnFilters
+        })
+      });
+      setFeedback('Report requested.');
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'No se pudo generar el reporte.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div className="page">
       <h2>Tickets</h2>
-      <div className="grid grid-2">
-        <div className="card">
-          <h3>Create Ticket</h3>
-          <div className="grid">
-            <label>
-              Ticket Type
-              <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
-                <option value="">Select</option>
-                {ticketTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Title
-              <input value={title} readOnly />
-            </label>
-            {selectedTypeData?.name === 'OTROS' && (
-              <label>
-                Custom Title
-                <input value={title2} onChange={(event) => setTitle2(event.target.value)} />
-              </label>
-            )}
-            <label>
-              Description
-              <textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
-            </label>
-            <label>
-              Priority
-              <select
-                value={priorityId}
-                onChange={(event) => setPriorityId(event.target.value)}
-                disabled={user?.role === 'REQUESTER'}
-              >
-                {priorities.map((priority) => (
-                  <option key={priority.id} value={priority.id}>
-                    {priority.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button onClick={handleCreate}>Create</button>
-          </div>
-        </div>
-        <div className="card">
-          <h3>Filters</h3>
-          <div className="grid">
-            <label>
-              Text search
-              <input
-                value={filters.text}
-                onChange={(event) => setFilters({ ...filters, text: event.target.value })}
-                placeholder="Search title, description, code"
-              />
-            </label>
-            <label>
-              Status
-              <select value={filters.statusId} onChange={(event) => setFilters({ ...filters, statusId: event.target.value })}>
-                <option value="">All</option>
-                {statuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Priority
-              <select value={filters.priorityId} onChange={(event) => setFilters({ ...filters, priorityId: event.target.value })}>
-                <option value="">All</option>
-                {priorities.map((priority) => (
-                  <option key={priority.id} value={priority.id}>
-                    {priority.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Type
-              <select value={filters.ticketTypeId} onChange={(event) => setFilters({ ...filters, ticketTypeId: event.target.value })}>
-                <option value="">All</option>
-                {ticketTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Created from
-              <input
-                type="date"
-                value={filters.createdFrom}
-                onChange={(event) => setFilters({ ...filters, createdFrom: event.target.value })}
-              />
-            </label>
-            <label>
-              Created to
-              <input
-                type="date"
-                value={filters.createdTo}
-                onChange={(event) => setFilters({ ...filters, createdTo: event.target.value })}
-              />
-            </label>
-            <label>
-              Updated from
-              <input
-                type="date"
-                value={filters.updatedFrom}
-                onChange={(event) => setFilters({ ...filters, updatedFrom: event.target.value })}
-              />
-            </label>
-            <label>
-              Updated to
-              <input
-                type="date"
-                value={filters.updatedTo}
-                onChange={(event) => setFilters({ ...filters, updatedTo: event.target.value })}
-              />
-            </label>
-            <label>
-              Created by
-              <select
-                value={filters.createdById}
-                onChange={(event) => setFilters({ ...filters, createdById: event.target.value })}
-              >
-                <option value="">All</option>
-                {filteredUsers.map((userItem) => (
-                  <option key={userItem.id} value={userItem.id}>
-                    {userItem.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Assigned to
-              <select
-                value={filters.assignedToId}
-                onChange={(event) => setFilters({ ...filters, assignedToId: event.target.value })}
-              >
-                <option value="">All</option>
-                {filteredUsers.map((userItem) => (
-                  <option key={userItem.id} value={userItem.id}>
-                    {userItem.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="filters-checks">
-              <label className="check-row" htmlFor="assigned-to-me">
-                <span className="check-row__text">Assigned to me</span>
-                <input
-                  className="check-row__input"
-                  id="assigned-to-me"
-                  type="checkbox"
-                  checked={filters.assignedToMe}
-                  onChange={(event) => setFilters({ ...filters, assignedToMe: event.target.checked })}
-                />
-              </label>
-              <label className="check-row" htmlFor="created-by-me">
-                <span className="check-row__text">Created by me</span>
-                <input
-                  className="check-row__input"
-                  id="created-by-me"
-                  type="checkbox"
-                  checked={filters.createdByMe}
-                  onChange={(event) => setFilters({ ...filters, createdByMe: event.target.checked })}
-                />
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
       <div className="card" style={{ marginTop: '16px' }}>
         <div className="card__header">
           <h3>All Tickets</h3>
         </div>
+        <div className="tickets-toolbar">
+          <input
+            className="tickets-toolbar__search"
+            placeholder="Search tickets..."
+            value={globalSearch}
+            onChange={(event) => setGlobalSearch(event.target.value)}
+          />
+          <div className="tickets-toolbar__actions">
+            <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
+              <Plus size={16} />
+              New
+            </button>
+            {isAdmin ? (
+              <button
+                type="button"
+                className="tickets-toolbar__button danger"
+                onClick={handleDelete}
+                disabled={selectedIds.size === 0 || actionLoading}
+              >
+                <Trash2 size={16} />
+                Delete
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="tickets-toolbar__button secondary"
+              onClick={handleReport}
+              disabled={actionLoading}
+            >
+              <FileText size={16} />
+              Report
+            </button>
+          </div>
+        </div>
+        {feedback ? <p className="form-error">{feedback}</p> : null}
         <table className="table">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Status</th>
-              <th>Priority</th>
-              <th>Type</th>
-              <th>Created At</th>
-              <th>Updated At</th>
-              <th>Created By</th>
-              <th>Assigned To</th>
+              <th className="table__checkbox">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={handleSelectAll}
+                  aria-label="Select all visible tickets"
+                />
+              </th>
+              {columnDefinitions.map((column) => (
+                <th key={column.id}>
+                  <ColumnMenu
+                    columnId={column.id}
+                    label={column.label}
+                    isOpen={openColumnId === column.id}
+                    onToggle={handleToggleColumn}
+                    onClose={() => setOpenColumnId(null)}
+                    onSort={handleSort}
+                    onApplyFilter={handleApplyFilter}
+                    onClearFilter={handleClearFilter}
+                    currentFilter={columnFilters[column.id]}
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {tickets.map((ticket) => (
+            {displayTickets.map((ticket) => (
               <tr key={ticket.id}>
+                <td className="table__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(ticket.id)}
+                    onChange={() => handleSelectRow(ticket.id)}
+                    aria-label={`Select ticket ${ticket.title}`}
+                  />
+                </td>
                 <td>
                   <Link to={`/tickets/${ticket.id}`}>{ticket.title}</Link>
                 </td>
@@ -371,9 +355,9 @@ export function TicketsPage() {
                 <td>{ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned'}</td>
               </tr>
             ))}
-            {tickets.length === 0 && (
+            {displayTickets.length === 0 && (
               <tr>
-                <td colSpan={8}>No tickets match those filters.</td>
+                <td colSpan={9}>No tickets match those filters.</td>
               </tr>
             )}
           </tbody>
