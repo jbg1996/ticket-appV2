@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, FileText, Plus, Trash2 } from 'lucide-react';
+import { FileText, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
+import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
@@ -418,6 +419,9 @@ export function TicketsPage() {
                     onApplyFilter={handleApplyFilter}
                     onClearFilter={handleClearFilter}
                     currentFilter={columnFilters[column.id]}
+                    renderTrigger={({ label, onToggle, isOpen }) => (
+                      <ColumnHeaderTrigger label={label} onToggle={onToggle} isOpen={isOpen} />
+                    )}
                   />
                 </th>
               ))}

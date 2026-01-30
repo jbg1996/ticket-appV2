@@ -637,6 +637,7 @@ button.button-link:hover {
   align-items: center;
 }
 
+.column-header-trigger,
 .column-menu__trigger {
   background: transparent;
   color: #0f172a;
@@ -645,6 +646,14 @@ button.button-link:hover {
   align-items: center;
   gap: 6px;
   font-weight: 600;
+  border: 0;
+  cursor: pointer;
+}
+
+.column-header-trigger__chevron {
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
 }
 
 .column-menu__dropdown {
