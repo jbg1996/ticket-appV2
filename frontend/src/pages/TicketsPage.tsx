@@ -405,26 +405,22 @@ export function TicketsPage() {
                   aria-label="Select all visible tickets"
                 />
               </th>
-              {columnDefinitions.map((column) => {
-                const triggerRenderer = renderColumnTrigger(column.id, column.label);
-                return (
-                  <th key={column.id}>
-                    <ColumnMenu
-                      columnId={column.id}
-                      label={column.label}
-                      isDate={column.isDate}
-                      isOpen={openColumnId === column.id}
-                      onToggle={handleToggleColumn}
-                      onClose={() => setOpenColumnId(null)}
-                      onSort={handleSort}
-                      onApplyFilter={handleApplyFilter}
-                      onClearFilter={handleClearFilter}
-                      currentFilter={columnFilters[column.id]}
-                      renderTrigger={triggerRenderer}
-                    />
-                  </th>
-                );
-              })}
+              {columnDefinitions.map((column) => (
+                <th key={column.id}>
+                  <ColumnMenu
+                    columnId={column.id}
+                    label={column.label}
+                    isDate={column.isDate}
+                    isOpen={openColumnId === column.id}
+                    onToggle={handleToggleColumn}
+                    onClose={() => setOpenColumnId(null)}
+                    onSort={handleSort}
+                    onApplyFilter={handleApplyFilter}
+                    onClearFilter={handleClearFilter}
+                    currentFilter={columnFilters[column.id]}
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { ArrowDown, ArrowDownZA, ArrowUp, ArrowUpAZ, ChevronDown, Filter } from 'lucide-react';
 
 export type FilterOperator =
