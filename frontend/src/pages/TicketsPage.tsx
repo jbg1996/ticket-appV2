@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
+import { ReportIcon } from '../components/icons/ReportIcon';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
@@ -361,23 +362,23 @@ export function TicketsPage() {
             onChange={(event) => setGlobalSearch(event.target.value)}
           />
           <div className="tickets-toolbar__actions">
-            <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
-              <span className="btnInner">
-                <Plus size={16} />
-                <span>New</span>
-              </span>
+            <button
+              type="button"
+              className="tickets-toolbar__button inline-flex items-center gap-2"
+              onClick={() => navigate('/tickets/new')}
+            >
+              <Plus size={16} />
+              <span>New</span>
             </button>
             {isAdmin ? (
               <button
                 type="button"
-                className="tickets-toolbar__button danger"
+                className="tickets-toolbar__button danger inline-flex items-center gap-2"
                 onClick={handleDelete}
                 disabled={selectedIds.size === 0 || actionLoading}
               >
-                <span className="btnInner">
-                  <Trash2 size={16} />
-                  <span>Delete</span>
-                </span>
+                <Trash2 size={16} />
+                <span>Delete</span>
               </button>
             ) : null}
             <button
@@ -387,7 +388,7 @@ export function TicketsPage() {
               disabled={actionLoading}
             >
               <span className="btnInner">
-                <FileText size={16} />
+                <ReportIcon size={16} />
                 <span>Report</span>
               </span>
             </button>
