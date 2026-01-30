@@ -371,7 +371,7 @@ export function TicketsPage() {
             {isAdmin ? (
               <button
                 type="button"
-                className="tickets-toolbar__button danger"
+                className="tickets-toolbar__button danger inline-flex items-center gap-2"
                 onClick={handleDelete}
                 disabled={selectedIds.size === 0 || actionLoading}
               >
