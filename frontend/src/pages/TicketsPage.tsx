@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, FileText, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnMenu } from '../components/ColumnMenu';
@@ -264,6 +264,17 @@ export function TicketsPage() {
   const handleSort = (columnId: string, direction: 'asc' | 'desc') => {
     setSorting({ columnId, direction });
     setOpenColumnId(null);
+  };
+
+  const renderColumnTrigger = (columnId: string, label: string) => {
+    const isChevronColumn = ['title', 'status', 'priority', 'type'].includes(columnId);
+    if (!isChevronColumn) return undefined;
+    return ({ onToggle, label: triggerLabel }: { onToggle: () => void; label: string; isOpen: boolean }) => (
+      <button type="button" className="thButton" onClick={onToggle}>
+        <span>{triggerLabel}</span>
+        <ChevronDown size={14} className="thChevron" />
+      </button>
+    );
   };
 
   const handleSelectAll = () => {

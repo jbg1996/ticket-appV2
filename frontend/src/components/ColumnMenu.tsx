@@ -30,6 +30,7 @@ type ColumnMenuProps = {
   onApplyFilter: (columnId: string, filter: ColumnFilter) => void;
   onClearFilter: (columnId: string) => void;
   currentFilter?: ColumnFilter;
+  renderTrigger?: (props: { label: string; onToggle: () => void; isOpen: boolean }) => ReactNode;
 };
 
 const filterOptions: FilterOperator[] = [
@@ -57,7 +58,8 @@ export function ColumnMenu({
   onSort,
   onApplyFilter,
   onClearFilter,
-  currentFilter
+  currentFilter,
+  renderTrigger
 }: ColumnMenuProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [mode, setMode] = useState<'menu' | 'filter'>('menu');
@@ -132,10 +134,14 @@ export function ColumnMenu({
 
   return (
     <div className="column-menu" ref={containerRef}>
-      <button className="column-menu__trigger" type="button" onClick={() => onToggle(columnId)}>
-        <span>{label}</span>
-        <ChevronDown size={14} />
-      </button>
+      {renderTrigger ? (
+        renderTrigger({ label, onToggle: () => onToggle(columnId), isOpen })
+      ) : (
+        <button className="column-menu__trigger" type="button" onClick={() => onToggle(columnId)}>
+          <span>{label}</span>
+          <ChevronDown size={14} />
+        </button>
+      )}
       {isOpen && (
         <div className="column-menu__dropdown">
           {mode === 'menu' ? (
