@@ -362,13 +362,11 @@ export function TicketsPage() {
             onChange={(event) => setGlobalSearch(event.target.value)}
           />
           <div className="tickets-toolbar__actions">
-            <button
-              type="button"
-              className="tickets-toolbar__button inline-flex items-center gap-2"
-              onClick={() => navigate('/tickets/new')}
-            >
-              <Plus size={16} />
-              <span>New</span>
+            <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
+              <span className="btnInner">
+                <Plus size={16} className="tickets-toolbar__button-icon" />
+                <span>New</span>
+              </span>
             </button>
             {isAdmin ? (
               <button
@@ -377,8 +375,10 @@ export function TicketsPage() {
                 onClick={handleDelete}
                 disabled={selectedIds.size === 0 || actionLoading}
               >
-                <Trash2 size={16} />
-                <span>Delete</span>
+                <span className="btnInner">
+                  <Trash2 size={16} className="tickets-toolbar__button-icon" />
+                  <span>Delete</span>
+                </span>
               </button>
             ) : null}
             <button
@@ -388,7 +388,7 @@ export function TicketsPage() {
               disabled={actionLoading}
             >
               <span className="btnInner">
-                <ReportIcon size={16} />
+                <ReportIcon size={16} className="tickets-toolbar__button-icon" />
                 <span>Report</span>
               </span>
             </button>
