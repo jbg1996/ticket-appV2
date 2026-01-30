@@ -83,6 +83,42 @@ export function ArrowDownZA(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function ArrowUp(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      viewBox={props.viewBox ?? '0 0 24 24'}
+      fill={props.fill ?? 'none'}
+      stroke={props.stroke ?? 'currentColor'}
+      strokeWidth={props.strokeWidth ?? 2}
+      strokeLinecap={props.strokeLinecap ?? 'round'}
+      strokeLinejoin={props.strokeLinejoin ?? 'round'}
+      aria-hidden={props['aria-hidden'] ?? true}
+    >
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+export function ArrowDown(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      viewBox={props.viewBox ?? '0 0 24 24'}
+      fill={props.fill ?? 'none'}
+      stroke={props.stroke ?? 'currentColor'}
+      strokeWidth={props.strokeWidth ?? 2}
+      strokeLinecap={props.strokeLinecap ?? 'round'}
+      strokeLinejoin={props.strokeLinejoin ?? 'round'}
+      aria-hidden={props['aria-hidden'] ?? true}
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <polyline points="5 12 12 19 19 12" />
+    </svg>
+  );
+}
+
 export function Filter(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
