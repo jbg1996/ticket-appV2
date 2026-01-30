@@ -40,6 +40,7 @@ function AppShell() {
           }
         >
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/recent" element={<RecentTicketsPage />} />
           <Route path="/tickets" element={<TicketsPage />} />
