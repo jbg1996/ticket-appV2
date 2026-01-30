@@ -362,23 +362,23 @@ export function TicketsPage() {
             onChange={(event) => setGlobalSearch(event.target.value)}
           />
           <div className="tickets-toolbar__actions">
-            <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
-              <span className="btnInner">
-                <Plus size={16} />
-                <span>New</span>
-              </span>
+            <button
+              type="button"
+              className="tickets-toolbar__button inline-flex items-center gap-2"
+              onClick={() => navigate('/tickets/new')}
+            >
+              <Plus size={16} />
+              <span>New</span>
             </button>
             {isAdmin ? (
               <button
                 type="button"
-                className="tickets-toolbar__button danger"
+                className="tickets-toolbar__button danger inline-flex items-center gap-2"
                 onClick={handleDelete}
                 disabled={selectedIds.size === 0 || actionLoading}
               >
-                <span className="btnInner">
-                  <Trash2 size={16} />
-                  <span>Delete</span>
-                </span>
+                <Trash2 size={16} />
+                <span>Delete</span>
               </button>
             ) : null}
             <button
