@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { LayoutDashboard } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 const SIDEBAR_STORAGE_KEY = 'sidebarCollapsed';
@@ -28,6 +29,7 @@ const icons = {
       <path d="M12 7v5l3 3" />
     </svg>
   ),
+  dashboard: <LayoutDashboard {...iconProps} aria-hidden="true" />,
   ticket: (
     <svg {...iconProps} aria-hidden="true">
       <path d="M3 9h18v6H3z" />
@@ -95,6 +97,7 @@ export function SideBar() {
     () => [
       { label: 'Home', to: '/home', icon: icons.home },
       { label: 'Recent', to: '/recent', icon: icons.recent },
+      { label: 'Dashboard', to: '/dashboard', icon: icons.dashboard },
       { label: 'Tickets', to: '/tickets', icon: icons.ticket },
       { label: 'Report', to: '/reports', icon: icons.report }
     ],
