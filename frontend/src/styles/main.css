@@ -609,6 +609,28 @@ button.button-link:hover {
   font-size: 13px;
 }
 
+.btnInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.thChevron {
+  opacity: 0.8;
+}
+
 .table th,
 .table td {
   padding: 8px;

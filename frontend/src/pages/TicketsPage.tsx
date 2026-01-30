@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, FileText, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnMenu } from '../components/ColumnMenu';
@@ -266,6 +266,17 @@ export function TicketsPage() {
     setOpenColumnId(null);
   };
 
+  const renderColumnTrigger = (columnId: string, label: string) => {
+    const isChevronColumn = ['title', 'status', 'priority', 'type'].includes(columnId);
+    if (!isChevronColumn) return undefined;
+    return ({ onToggle, label: triggerLabel }: { onToggle: () => void; label: string; isOpen: boolean }) => (
+      <button type="button" className="thButton" onClick={onToggle}>
+        <span>{triggerLabel}</span>
+        <ChevronDown size={14} className="thChevron" />
+      </button>
+    );
+  };
+
   const handleSelectAll = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -350,8 +361,10 @@ export function TicketsPage() {
           />
           <div className="tickets-toolbar__actions">
             <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
-              <Plus size={16} />
-              New
+              <span className="btnInner">
+                <Plus size={16} />
+                <span>New</span>
+              </span>
             </button>
             {isAdmin ? (
               <button
@@ -360,8 +373,10 @@ export function TicketsPage() {
                 onClick={handleDelete}
                 disabled={selectedIds.size === 0 || actionLoading}
               >
-                <Trash2 size={16} />
-                Delete
+                <span className="btnInner">
+                  <Trash2 size={16} />
+                  <span>Delete</span>
+                </span>
               </button>
             ) : null}
             <button
@@ -370,8 +385,10 @@ export function TicketsPage() {
               onClick={handleReport}
               disabled={actionLoading}
             >
-              <FileText size={16} />
-              Report
+              <span className="btnInner">
+                <FileText size={16} />
+                <span>Report</span>
+              </span>
             </button>
           </div>
         </div>
@@ -388,22 +405,26 @@ export function TicketsPage() {
                   aria-label="Select all visible tickets"
                 />
               </th>
-              {columnDefinitions.map((column) => (
-                <th key={column.id}>
-                  <ColumnMenu
-                    columnId={column.id}
-                    label={column.label}
-                    isDate={column.isDate}
-                    isOpen={openColumnId === column.id}
-                    onToggle={handleToggleColumn}
-                    onClose={() => setOpenColumnId(null)}
-                    onSort={handleSort}
-                    onApplyFilter={handleApplyFilter}
-                    onClearFilter={handleClearFilter}
-                    currentFilter={columnFilters[column.id]}
-                  />
-                </th>
-              ))}
+              {columnDefinitions.map((column) => {
+                const triggerRenderer = renderColumnTrigger(column.id, column.label);
+                return (
+                  <th key={column.id}>
+                    <ColumnMenu
+                      columnId={column.id}
+                      label={column.label}
+                      isDate={column.isDate}
+                      isOpen={openColumnId === column.id}
+                      onToggle={handleToggleColumn}
+                      onClose={() => setOpenColumnId(null)}
+                      onSort={handleSort}
+                      onApplyFilter={handleApplyFilter}
+                      onClearFilter={handleClearFilter}
+                      currentFilter={columnFilters[column.id]}
+                      renderTrigger={triggerRenderer}
+                    />
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
