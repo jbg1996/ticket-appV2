@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowDownZA, ArrowUp, ArrowUpAZ, ChevronDown, Filter } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, Filter } from 'lucide-react';
 
 export type FilterOperator =
   | 'Equals'
@@ -160,11 +160,11 @@ export function ColumnMenu({
               ) : (
                 <>
                   <button type="button" className="column-menu__item" onClick={() => onSort(columnId, 'asc')}>
-                    <ArrowUpAZ size={18} />
+                    <ArrowUp size={18} />
                     A to Z
                   </button>
                   <button type="button" className="column-menu__item" onClick={() => onSort(columnId, 'desc')}>
-                    <ArrowDownZA size={18} />
+                    <ArrowDown size={18} />
                     Z to A
                   </button>
                 </>
