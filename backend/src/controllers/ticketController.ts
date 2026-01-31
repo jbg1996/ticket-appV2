@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../prisma/client.js';
 import { addHistory } from '../services/historyService.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { buildTicketQuery, ColumnFilterInput } from '../utils/ticketQueryBuilder.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,23 +39,24 @@ export async function listTickets(req: AuthRequest, res: Response) {
     pageSize
   } = req.query as Record<string, string>;
 
-  const filters: Record<string, unknown> = {};
-  if (statusId) filters.statusId = statusId;
-  if (priorityId) filters.priorityId = priorityId;
-  if (ticketTypeId || typeId) filters.ticketTypeId = ticketTypeId ?? typeId;
-  if (assignedToId) filters.assignedToId = assignedToId;
-  if (createdById) filters.createdById = createdById;
-  if (assignedToMe === 'true' && req.user) filters.assignedToId = req.user.id;
-  if (createdByMe === 'true' && req.user) filters.createdById = req.user.id;
+  const baseWhere: Prisma.TicketWhereInput = {};
+  if (statusId) baseWhere.statusId = statusId;
+  if (priorityId) baseWhere.priorityId = priorityId;
+  if (ticketTypeId || typeId) baseWhere.ticketTypeId = ticketTypeId ?? typeId;
+  if (assignedToId) baseWhere.assignedToId = assignedToId;
+  if (createdById) baseWhere.createdById = createdById;
+  if (assignedToMe === 'true' && req.user) baseWhere.assignedToId = req.user.id;
+  if (createdByMe === 'true' && req.user) baseWhere.createdById = req.user.id;
 
+  const filters: Record<string, ColumnFilterInput> = {};
   if (status) {
-    filters.status = { name: { equals: status, mode: 'insensitive' } };
+    filters.status = { kind: 'text', op: 'Equals', value: status };
   }
   if (priority) {
-    filters.priority = { name: { equals: priority, mode: 'insensitive' } };
+    filters.priority = { kind: 'text', op: 'Equals', value: priority };
   }
   if (type) {
-    filters.ticketType = { name: { equals: type, mode: 'insensitive' } };
+    filters.type = { kind: 'text', op: 'Equals', value: type };
   }
 
   const createdAtFilter: Record<string, Date> = {};
@@ -67,7 +69,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
     if (!Number.isNaN(parsed.getTime())) createdAtFilter.lte = parsed;
   }
   if (Object.keys(createdAtFilter).length > 0) {
-    filters.createdAt = createdAtFilter;
+    baseWhere.createdAt = createdAtFilter;
   }
 
   const updatedAtFilter: Record<string, Date> = {};
@@ -80,35 +82,25 @@ export async function listTickets(req: AuthRequest, res: Response) {
     if (!Number.isNaN(parsed.getTime())) updatedAtFilter.lte = parsed;
   }
   if (Object.keys(updatedAtFilter).length > 0) {
-    filters.updatedAt = updatedAtFilter;
-  }
-
-  if (text) {
-    filters.OR = [
-      { title: { contains: text, mode: 'insensitive' } },
-      { description: { contains: text, mode: 'insensitive' } },
-      { code: { contains: text, mode: 'insensitive' } }
-    ];
+    baseWhere.updatedAt = updatedAtFilter;
   }
 
   const sortDirection = sortDir === 'asc' ? 'asc' : 'desc';
-  let orderBy: Record<string, unknown> = { createdAt: 'desc' };
-  if (sortBy === 'updatedAt') {
-    orderBy = { updatedAt: sortDirection };
-  } else if (sortBy === 'priority') {
-    orderBy = { priority: { name: sortDirection } };
-  } else if (sortBy === 'status') {
-    orderBy = { status: { sortOrder: sortDirection } };
-  } else if (sortBy === 'createdAt') {
-    orderBy = { createdAt: sortDirection };
-  }
+  const { where, orderBy } = buildTicketQuery({
+    query: {
+      q: text,
+      filters,
+      sort: sortBy ? { column: sortBy, direction: sortDirection } : null
+    },
+    baseWhere
+  });
 
   const pageNumber = Number(page) || 1;
   const pageSizeNumber = Number(pageSize) || 50;
   const skip = pageNumber > 1 ? (pageNumber - 1) * pageSizeNumber : 0;
 
   const tickets = await prisma.ticket.findMany({
-    where: filters,
+    where,
     include: {
       ticketType: true,
       priority: true,
