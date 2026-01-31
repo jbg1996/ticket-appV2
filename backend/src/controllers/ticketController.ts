@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../prisma/client.js';
 import { addHistory } from '../services/historyService.js';
 import { AuthRequest } from '../middleware/auth.js';
@@ -451,18 +452,73 @@ export async function deleteTicket(req: AuthRequest, res: Response) {
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const ticket = await prisma.ticket.findUnique({ where: { id: parsedId }, include: { status: true } });
-  if (!ticket || !ticket.status) {
-    return res.status(404).json({ message: 'Ticket not found.' });
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: parsedId }, include: { status: true } });
+    if (!ticket || !ticket.status) {
+      return res.status(404).json({ message: 'Ticket not found.' });
+    }
+    if (req.user.role !== 'ADMIN') {
+      const createdAt = ticket.createdAt.getTime();
+      const now = Date.now();
+      const isNew = ticket.status.name === 'Nuevo';
+      if (!isNew || now - createdAt > ONE_DAY_MS) {
+        return res.status(400).json({ message: 'Delete safeguard triggered. Only new tickets within 24h can be deleted.' });
+      }
+    }
+    await prisma.ticket.delete({ where: { id: parsedId } });
+    return res.status(204).send();
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return res.status(409).json({ message: 'Cannot delete ticket because it is referenced by other records.' });
+    }
+    return res.status(500).json({ message: 'Failed to delete ticket.' });
   }
-  const createdAt = ticket.createdAt.getTime();
-  const now = Date.now();
-  const isNew = ticket.status.name === 'Nuevo';
-  if (!isNew || now - createdAt > ONE_DAY_MS) {
-    return res.status(400).json({ message: 'Delete safeguard triggered. Only new tickets within 24h can be deleted.' });
+}
+
+export async function deleteTicketsBulk(req: AuthRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized.' });
   }
-  await prisma.ticket.delete({ where: { id: parsedId } });
-  res.status(204).send();
+  const { ids } = req.body as { ids?: number[] };
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: 'ids must be a non-empty array.' });
+  }
+  const parsedIds = ids
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  if (parsedIds.length !== ids.length) {
+    return res.status(400).json({ message: 'ids must contain valid ticket ids.' });
+  }
+
+  if (req.user.role !== 'ADMIN') {
+    const tickets = await prisma.ticket.findMany({
+      where: { id: { in: parsedIds } },
+      include: { status: true }
+    });
+    const now = Date.now();
+    const blockedIds = tickets
+      .filter((ticket) => {
+        const isNew = ticket.status?.name === 'Nuevo';
+        return !isNew || now - ticket.createdAt.getTime() > ONE_DAY_MS;
+      })
+      .map((ticket) => ticket.id);
+    if (blockedIds.length > 0) {
+      return res.status(400).json({
+        message: 'Some tickets cannot be deleted due to safeguard rules.',
+        blockedIds
+      });
+    }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => tx.ticket.deleteMany({ where: { id: { in: parsedIds } } }));
+    return res.json({ deletedCount: result.count });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return res.status(409).json({ message: 'Cannot delete ticket because it is referenced by other records.' });
+    }
+    return res.status(500).json({ message: 'Failed to delete tickets.' });
+  }
 }
 
 export async function addComment(req: AuthRequest, res: Response) {

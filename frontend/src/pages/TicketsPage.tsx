@@ -309,15 +309,12 @@ export function TicketsPage() {
     setActionLoading(true);
     setFeedback('');
     try {
-      await Promise.all(
-        Array.from(selectedIds).map((id) =>
-          apiFetch(`/api/tickets/${id}`, {
-            method: 'DELETE'
-          })
-        )
-      );
+      const response = await apiFetch<{ deletedCount: number }>('/api/tickets/bulk', {
+        method: 'DELETE',
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
       setSelectedIds(new Set());
-      setFeedback('Tickets deleted.');
+      setFeedback(`Tickets deleted. (${response.deletedCount})`);
       loadTickets();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'No se pudieron eliminar los tickets.');
