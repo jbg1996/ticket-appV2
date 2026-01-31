@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs/promises';
+import { Prisma } from '@prisma/client';
 import prisma from '../prisma/client.js';
 import { env } from '../config/env.js';
 
@@ -8,12 +9,12 @@ async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
 }
 
-type ReportPreset = 'TODAY' | 'THIS_MONTH' | 'YTD' | 'CUSTOM' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
-
 type GenerateReportParams = {
-  preset: ReportPreset;
-  rangeStart: Date;
-  rangeEnd: Date;
+  label: string;
+  where: Prisma.TicketWhereInput;
+  orderBy?: Prisma.TicketOrderByWithRelationInput | Prisma.TicketOrderByWithRelationInput[];
+  rangeStart?: Date;
+  rangeEnd?: Date;
   fileName?: string;
 };
 
@@ -22,10 +23,14 @@ type GeneratedReport = {
   filePath: string;
   mimeType: string;
   ticketCount: number;
+  rangeStart: Date;
+  rangeEnd: Date;
 };
 
 export async function generateReport({
-  preset,
+  label,
+  where,
+  orderBy,
   rangeStart,
   rangeEnd,
   fileName
@@ -35,12 +40,7 @@ export async function generateReport({
   const detailSheet = workbook.addWorksheet('Details');
 
   const tickets = await prisma.ticket.findMany({
-    where: {
-      createdAt: {
-        gte: rangeStart,
-        lte: rangeEnd
-      }
-    },
+    where,
     select: {
       createdAt: true,
       description: true,
@@ -48,7 +48,8 @@ export async function generateReport({
       priority: { select: { name: true } },
       status: { select: { name: true } },
       ticketType: { select: { name: true } }
-    }
+    },
+    orderBy: orderBy ?? { createdAt: 'desc' }
   });
 
   detailSheet.columns = [
@@ -70,8 +71,21 @@ export async function generateReport({
     });
   });
 
+  let resolvedRangeStart = rangeStart;
+  let resolvedRangeEnd = rangeEnd;
+  if (!resolvedRangeStart || !resolvedRangeEnd) {
+    if (tickets.length > 0) {
+      const timestamps = tickets.map((ticket) => ticket.createdAt.getTime());
+      resolvedRangeStart = new Date(Math.min(...timestamps));
+      resolvedRangeEnd = new Date(Math.max(...timestamps));
+    } else {
+      resolvedRangeStart = resolvedRangeStart ?? now;
+      resolvedRangeEnd = resolvedRangeEnd ?? now;
+    }
+  }
+
   await ensureDir(env.reportDir);
-  const resolvedFileName = fileName ?? `report-${preset.toLowerCase()}-${now.toISOString().split('T')[0]}.xlsx`;
+  const resolvedFileName = fileName ?? `report-${label}-${now.toISOString().split('T')[0]}.xlsx`;
   const filePath = path.join(env.reportDir, resolvedFileName);
   await workbook.xlsx.writeFile(filePath);
 
@@ -79,6 +93,8 @@ export async function generateReport({
     fileName: resolvedFileName,
     filePath,
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ticketCount: tickets.length
+    ticketCount: tickets.length,
+    rangeStart: resolvedRangeStart,
+    rangeEnd: resolvedRangeEnd
   };
 }

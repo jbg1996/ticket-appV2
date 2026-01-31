@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import prisma from '../prisma/client.js';
 import { generateReport } from '../services/reportService.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { buildTicketQuery, parseTicketQuery } from '../utils/ticketQueryBuilder.js';
 
 type ReportPreset = 'TODAY' | 'THIS_MONTH' | 'YTD' | 'CUSTOM';
 
@@ -44,16 +45,74 @@ function buildPresetRange(preset: ReportPreset, startDate?: string, endDate?: st
 }
 
 export async function generateReportHandler(req: AuthRequest, res: Response) {
-  const { preset, startDate, endDate } = req.body as {
+  const { preset, startDate, endDate, source, ticketQuery } = req.body as {
     preset?: ReportPreset;
     startDate?: string;
     endDate?: string;
+    source?: string;
+    ticketQuery?: unknown;
   };
-  if (!preset || !['TODAY', 'THIS_MONTH', 'YTD', 'CUSTOM'].includes(preset)) {
-    return res.status(400).json({ message: 'Invalid preset.' });
-  }
   if (!req.user) {
     return res.status(401).json({ message: 'Missing authorization header.' });
+  }
+  if (source === 'tickets') {
+    let parsedQuery;
+    try {
+      parsedQuery = parseTicketQuery(ticketQuery);
+    } catch (error) {
+      return res.status(400).json({ message: error instanceof Error ? error.message : 'Invalid ticket query.' });
+    }
+    const { where, orderBy } = buildTicketQuery({ query: parsedQuery });
+    const fileName = `report-tickets-${new Date().toISOString().split('T')[0]}.xlsx`;
+    const now = new Date();
+    const pendingReport = await prisma.report.create({
+      data: {
+        fileName,
+        preset: 'TICKETS',
+        rangeStart: now,
+        rangeEnd: now,
+        createdById: req.user.id,
+        status: 'PENDING'
+      }
+    });
+    console.info(`Report generation started`, { reportId: pendingReport.id, source: 'tickets' });
+    try {
+      const reportResult = await generateReport({
+        label: 'tickets',
+        where,
+        orderBy,
+        fileName
+      });
+      console.info(`Report generation ticket count`, { reportId: pendingReport.id, ticketCount: reportResult.ticketCount });
+      const report = await prisma.report.update({
+        where: { id: pendingReport.id },
+        data: {
+          status: 'READY',
+          fileName: reportResult.fileName,
+          filePath: reportResult.filePath,
+          mimeType: reportResult.mimeType,
+          rangeStart: reportResult.rangeStart,
+          rangeEnd: reportResult.rangeEnd,
+          errorMessage: null
+        }
+      });
+      return res.status(201).json(report);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Report generation failed`, { reportId: pendingReport.id, error });
+      await prisma.report.update({
+        where: { id: pendingReport.id },
+        data: {
+          status: 'FAILED',
+          errorMessage
+        }
+      });
+      return res.status(500).json({ message: 'Report generation failed', error: errorMessage });
+    }
+  }
+
+  if (!preset || !['TODAY', 'THIS_MONTH', 'YTD', 'CUSTOM'].includes(preset)) {
+    return res.status(400).json({ message: 'Invalid preset.' });
   }
   const range = buildPresetRange(preset, startDate, endDate);
   if (!range) {
@@ -73,9 +132,15 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
   console.info(`Report generation started`, { reportId: pendingReport.id });
   try {
     const reportResult = await generateReport({
-      preset,
+      label: preset.toLowerCase(),
       rangeStart: range.rangeStart,
       rangeEnd: range.rangeEnd,
+      where: {
+        createdAt: {
+          gte: range.rangeStart,
+          lte: range.rangeEnd
+        }
+      },
       fileName
     });
     console.info(`Report generation ticket count`, { reportId: pendingReport.id, ticketCount: reportResult.ticketCount });
