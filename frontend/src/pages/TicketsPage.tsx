@@ -327,13 +327,16 @@ export function TicketsPage() {
     setActionLoading(true);
     setFeedback('');
     try {
+      const ticketQuery = {
+        q: globalSearch.trim() || undefined,
+        filters: Object.keys(columnFilters).length > 0 ? columnFilters : undefined,
+        sort: sorting ? { column: sorting.columnId, direction: sorting.direction } : undefined
+      };
       await apiFetch('/api/reports', {
         method: 'POST',
         body: JSON.stringify({
           source: 'tickets',
-          search: globalSearch,
-          sorting,
-          filters: columnFilters
+          ticketQuery
         })
       });
       setFeedback('Report requested.');
