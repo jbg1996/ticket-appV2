@@ -40,6 +40,7 @@ import {
   requestInfo,
   respondInfo,
   deleteTicket,
+  deleteTicketsBulk,
   addComment
 } from './controllers/ticketController.js';
 import { uploadAttachment, downloadAttachment } from './controllers/attachmentController.js';
@@ -177,6 +178,7 @@ app.post('/api/tickets/:id/comment', requireAuth, async (req, res, next) => {
     next(error as Error);
   }
 });
+app.delete('/api/tickets/bulk', requireAuth, requireAdminRole, deleteTicketsBulk);
 app.delete('/api/tickets/:id', requireAuth, requireAdminRole, deleteTicket);
 
 app.post('/api/tickets/:id/attachments', requireAuth, upload.single('file'), uploadAttachment);

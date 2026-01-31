@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../prisma/client.js';
 import { addHistory } from '../services/historyService.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { buildTicketQuery, ColumnFilterInput } from '../utils/ticketQueryBuilder.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -37,23 +39,24 @@ export async function listTickets(req: AuthRequest, res: Response) {
     pageSize
   } = req.query as Record<string, string>;
 
-  const filters: Record<string, unknown> = {};
-  if (statusId) filters.statusId = statusId;
-  if (priorityId) filters.priorityId = priorityId;
-  if (ticketTypeId || typeId) filters.ticketTypeId = ticketTypeId ?? typeId;
-  if (assignedToId) filters.assignedToId = assignedToId;
-  if (createdById) filters.createdById = createdById;
-  if (assignedToMe === 'true' && req.user) filters.assignedToId = req.user.id;
-  if (createdByMe === 'true' && req.user) filters.createdById = req.user.id;
+  const baseWhere: Prisma.TicketWhereInput = {};
+  if (statusId) baseWhere.statusId = statusId;
+  if (priorityId) baseWhere.priorityId = priorityId;
+  if (ticketTypeId || typeId) baseWhere.ticketTypeId = ticketTypeId ?? typeId;
+  if (assignedToId) baseWhere.assignedToId = assignedToId;
+  if (createdById) baseWhere.createdById = createdById;
+  if (assignedToMe === 'true' && req.user) baseWhere.assignedToId = req.user.id;
+  if (createdByMe === 'true' && req.user) baseWhere.createdById = req.user.id;
 
+  const filters: Record<string, ColumnFilterInput> = {};
   if (status) {
-    filters.status = { name: { equals: status, mode: 'insensitive' } };
+    filters.status = { kind: 'text', op: 'Equals', value: status };
   }
   if (priority) {
-    filters.priority = { name: { equals: priority, mode: 'insensitive' } };
+    filters.priority = { kind: 'text', op: 'Equals', value: priority };
   }
   if (type) {
-    filters.ticketType = { name: { equals: type, mode: 'insensitive' } };
+    filters.type = { kind: 'text', op: 'Equals', value: type };
   }
 
   const createdAtFilter: Record<string, Date> = {};
@@ -66,7 +69,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
     if (!Number.isNaN(parsed.getTime())) createdAtFilter.lte = parsed;
   }
   if (Object.keys(createdAtFilter).length > 0) {
-    filters.createdAt = createdAtFilter;
+    baseWhere.createdAt = createdAtFilter;
   }
 
   const updatedAtFilter: Record<string, Date> = {};
@@ -79,35 +82,25 @@ export async function listTickets(req: AuthRequest, res: Response) {
     if (!Number.isNaN(parsed.getTime())) updatedAtFilter.lte = parsed;
   }
   if (Object.keys(updatedAtFilter).length > 0) {
-    filters.updatedAt = updatedAtFilter;
-  }
-
-  if (text) {
-    filters.OR = [
-      { title: { contains: text, mode: 'insensitive' } },
-      { description: { contains: text, mode: 'insensitive' } },
-      { code: { contains: text, mode: 'insensitive' } }
-    ];
+    baseWhere.updatedAt = updatedAtFilter;
   }
 
   const sortDirection = sortDir === 'asc' ? 'asc' : 'desc';
-  let orderBy: Record<string, unknown> = { createdAt: 'desc' };
-  if (sortBy === 'updatedAt') {
-    orderBy = { updatedAt: sortDirection };
-  } else if (sortBy === 'priority') {
-    orderBy = { priority: { name: sortDirection } };
-  } else if (sortBy === 'status') {
-    orderBy = { status: { sortOrder: sortDirection } };
-  } else if (sortBy === 'createdAt') {
-    orderBy = { createdAt: sortDirection };
-  }
+  const { where, orderBy } = buildTicketQuery({
+    query: {
+      q: text,
+      filters,
+      sort: sortBy ? { column: sortBy, direction: sortDirection } : null
+    },
+    baseWhere
+  });
 
   const pageNumber = Number(page) || 1;
   const pageSizeNumber = Number(pageSize) || 50;
   const skip = pageNumber > 1 ? (pageNumber - 1) * pageSizeNumber : 0;
 
   const tickets = await prisma.ticket.findMany({
-    where: filters,
+    where,
     include: {
       ticketType: true,
       priority: true,
@@ -451,18 +444,73 @@ export async function deleteTicket(req: AuthRequest, res: Response) {
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const ticket = await prisma.ticket.findUnique({ where: { id: parsedId }, include: { status: true } });
-  if (!ticket || !ticket.status) {
-    return res.status(404).json({ message: 'Ticket not found.' });
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: parsedId }, include: { status: true } });
+    if (!ticket || !ticket.status) {
+      return res.status(404).json({ message: 'Ticket not found.' });
+    }
+    if (req.user.role !== 'ADMIN') {
+      const createdAt = ticket.createdAt.getTime();
+      const now = Date.now();
+      const isNew = ticket.status.name === 'Nuevo';
+      if (!isNew || now - createdAt > ONE_DAY_MS) {
+        return res.status(400).json({ message: 'Delete safeguard triggered. Only new tickets within 24h can be deleted.' });
+      }
+    }
+    await prisma.ticket.delete({ where: { id: parsedId } });
+    return res.status(204).send();
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return res.status(409).json({ message: 'Cannot delete ticket because it is referenced by other records.' });
+    }
+    return res.status(500).json({ message: 'Failed to delete ticket.' });
   }
-  const createdAt = ticket.createdAt.getTime();
-  const now = Date.now();
-  const isNew = ticket.status.name === 'Nuevo';
-  if (!isNew || now - createdAt > ONE_DAY_MS) {
-    return res.status(400).json({ message: 'Delete safeguard triggered. Only new tickets within 24h can be deleted.' });
+}
+
+export async function deleteTicketsBulk(req: AuthRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized.' });
   }
-  await prisma.ticket.delete({ where: { id: parsedId } });
-  res.status(204).send();
+  const { ids } = req.body as { ids?: number[] };
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: 'ids must be a non-empty array.' });
+  }
+  const parsedIds = ids
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  if (parsedIds.length !== ids.length) {
+    return res.status(400).json({ message: 'ids must contain valid ticket ids.' });
+  }
+
+  if (req.user.role !== 'ADMIN') {
+    const tickets = await prisma.ticket.findMany({
+      where: { id: { in: parsedIds } },
+      include: { status: true }
+    });
+    const now = Date.now();
+    const blockedIds = tickets
+      .filter((ticket) => {
+        const isNew = ticket.status?.name === 'Nuevo';
+        return !isNew || now - ticket.createdAt.getTime() > ONE_DAY_MS;
+      })
+      .map((ticket) => ticket.id);
+    if (blockedIds.length > 0) {
+      return res.status(400).json({
+        message: 'Some tickets cannot be deleted due to safeguard rules.',
+        blockedIds
+      });
+    }
+  }
+
+  try {
+    const result = await prisma.$transaction(async (tx) => tx.ticket.deleteMany({ where: { id: { in: parsedIds } } }));
+    return res.json({ deletedCount: result.count });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      return res.status(409).json({ message: 'Cannot delete ticket because it is referenced by other records.' });
+    }
+    return res.status(500).json({ message: 'Failed to delete tickets.' });
+  }
 }
 
 export async function addComment(req: AuthRequest, res: Response) {
