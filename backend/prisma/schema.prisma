@@ -90,7 +90,7 @@ model Ticket {
 model Attachment {
   id           String   @id @default(cuid())
   ticketId     Int
-  ticket       Ticket   @relation(fields: [ticketId], references: [id])
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   uploaderId   String
   uploader     User     @relation("Uploader", fields: [uploaderId], references: [id])
   originalName String
@@ -103,7 +103,7 @@ model Attachment {
 model TicketHistory {
   id        String   @id @default(cuid())
   ticketId  Int
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   actorId   String
   actor     User     @relation("Actor", fields: [actorId], references: [id])
   eventType String
@@ -115,7 +115,7 @@ model TicketHistory {
 model InfoRequest {
   id              String   @id @default(cuid())
   ticketId        Int
-  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   requesterTechId String
   requesterTech   User     @relation("RequesterTech", fields: [requesterTechId], references: [id])
   message         String
