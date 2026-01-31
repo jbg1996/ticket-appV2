@@ -167,8 +167,8 @@ export function TicketDetailPage() {
     try {
       await apiFetch(`/api/tickets/${id}`, { method: 'DELETE' });
       window.location.href = '/tickets';
-    } catch {
-      setAdminError('No autorizado');
+    } catch (error) {
+      setAdminError(error instanceof Error ? error.message : 'No autorizado');
     }
   };
 

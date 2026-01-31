@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
+import { ReportIcon } from '../components/icons/ReportIcon';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
@@ -308,15 +309,12 @@ export function TicketsPage() {
     setActionLoading(true);
     setFeedback('');
     try {
-      await Promise.all(
-        Array.from(selectedIds).map((id) =>
-          apiFetch(`/api/tickets/${id}`, {
-            method: 'DELETE'
-          })
-        )
-      );
+      const response = await apiFetch<{ deletedCount: number }>('/api/tickets/bulk', {
+        method: 'DELETE',
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
       setSelectedIds(new Set());
-      setFeedback('Tickets deleted.');
+      setFeedback(`Tickets deleted. (${response.deletedCount})`);
       loadTickets();
     } catch (err) {
       setFeedback(err instanceof Error ? err.message : 'No se pudieron eliminar los tickets.');
@@ -329,13 +327,16 @@ export function TicketsPage() {
     setActionLoading(true);
     setFeedback('');
     try {
+      const ticketQuery = {
+        q: globalSearch.trim() || undefined,
+        filters: Object.keys(columnFilters).length > 0 ? columnFilters : undefined,
+        sort: sorting ? { column: sorting.columnId, direction: sorting.direction } : undefined
+      };
       await apiFetch('/api/reports', {
         method: 'POST',
         body: JSON.stringify({
           source: 'tickets',
-          search: globalSearch,
-          sorting,
-          filters: columnFilters
+          ticketQuery
         })
       });
       setFeedback('Report requested.');
@@ -363,19 +364,19 @@ export function TicketsPage() {
           <div className="tickets-toolbar__actions">
             <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
               <span className="btnInner">
-                <Plus size={16} />
+                <Plus size={16} className="tickets-toolbar__button-icon" />
                 <span>New</span>
               </span>
             </button>
             {isAdmin ? (
               <button
                 type="button"
-                className="tickets-toolbar__button danger"
+                className="tickets-toolbar__button danger inline-flex items-center gap-2"
                 onClick={handleDelete}
                 disabled={selectedIds.size === 0 || actionLoading}
               >
                 <span className="btnInner">
-                  <Trash2 size={16} />
+                  <Trash2 size={16} className="tickets-toolbar__button-icon" />
                   <span>Delete</span>
                 </span>
               </button>
@@ -387,7 +388,7 @@ export function TicketsPage() {
               disabled={actionLoading}
             >
               <span className="btnInner">
-                <FileText size={16} />
+                <ReportIcon size={16} className="tickets-toolbar__button-icon" />
                 <span>Report</span>
               </span>
             </button>
