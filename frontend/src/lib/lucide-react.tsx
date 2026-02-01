@@ -195,3 +195,38 @@ export function FileText(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function Clock(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      viewBox={props.viewBox ?? '0 0 24 24'}
+      fill={props.fill ?? 'none'}
+      stroke={props.stroke ?? 'currentColor'}
+      strokeWidth={props.strokeWidth ?? 2}
+      strokeLinecap={props.strokeLinecap ?? 'round'}
+      strokeLinejoin={props.strokeLinejoin ?? 'round'}
+      aria-hidden={props['aria-hidden'] ?? true}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+export function Paperclip(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      viewBox={props.viewBox ?? '0 0 24 24'}
+      fill={props.fill ?? 'none'}
+      stroke={props.stroke ?? 'currentColor'}
+      strokeWidth={props.strokeWidth ?? 2}
+      strokeLinecap={props.strokeLinecap ?? 'round'}
+      strokeLinejoin={props.strokeLinejoin ?? 'round'}
+      aria-hidden={props['aria-hidden'] ?? true}
+    >
+      <path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 0 1 4.95 4.95l-8.84 8.84a2 2 0 0 1-2.83-2.83l8.49-8.49" />
+    </svg>
+  );
+}
