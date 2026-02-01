@@ -119,6 +119,14 @@ export function TicketDetailPage() {
     }
   }, [isAdmin]);
 
+  const filteredAssignees = useMemo(() => {
+    const query = assigneeQuery.trim().toLowerCase();
+    if (!query) return assignees;
+    return assignees.filter((assignee) =>
+      `${assignee.firstName} ${assignee.lastName}`.toLowerCase().includes(query)
+    );
+  }, [assigneeQuery, assignees]);
+
   const handleRequestInfo = async () => {
     if (!id) return;
     await apiFetch(`/api/tickets/${id}/request-info`, {
@@ -267,14 +275,6 @@ export function TicketDetailPage() {
   const assignedInitials = ticket.assignedTo
     ? `${ticket.assignedTo.firstName.charAt(0)}${ticket.assignedTo.lastName.charAt(0)}`.toUpperCase()
     : 'UN';
-
-  const filteredAssignees = useMemo(() => {
-    const query = assigneeQuery.trim().toLowerCase();
-    if (!query) return assignees;
-    return assignees.filter((assignee) =>
-      `${assignee.firstName} ${assignee.lastName}`.toLowerCase().includes(query)
-    );
-  }, [assigneeQuery, assignees]);
 
   const statusTone = (() => {
     const normalized = ticket.status.name.toLowerCase();
