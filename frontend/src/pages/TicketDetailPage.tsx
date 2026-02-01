@@ -292,17 +292,6 @@ export function TicketDetailPage() {
             <div className="ticket-detail__title-row">
               <h1>{ticket.title}</h1>
             </div>
-            <TabsList className="ticket-detail__tabs-list">
-              <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
-                Details
-              </TabsTrigger>
-              <TabsTrigger value="history" className="ticket-detail__tab ticket-detail__tab--icon" title="History">
-                <Clock size={16} />
-              </TabsTrigger>
-              <TabsTrigger value="attachments" className="ticket-detail__tab ticket-detail__tab--icon" title="Attachments">
-                <Paperclip size={16} />
-              </TabsTrigger>
-            </TabsList>
             <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
               <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
                 <span className="ticket-detail__avatar" aria-hidden="true">
@@ -336,6 +325,17 @@ export function TicketDetailPage() {
                 </PopoverContent>
               )}
             </Popover>
+            <TabsList className="ticket-detail__tabs-list">
+              <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="history" className="ticket-detail__tab ticket-detail__tab--icon" title="History">
+                <Clock size={16} />
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="ticket-detail__tab ticket-detail__tab--icon" title="Attachments">
+                <Paperclip size={16} />
+              </TabsTrigger>
+            </TabsList>
           </div>
           <div className="ticket-detail__meta">
             <div className="ticket-detail__meta-item">
