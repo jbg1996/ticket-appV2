@@ -286,90 +286,96 @@ export function TicketDetailPage() {
 
   return (
     <div className="page ticket-detail">
-      <div className="ticket-detail__header">
-        <div className="ticket-detail__title">
-          <h1>{ticket.title}</h1>
-          <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
-            <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
-              <span className="ticket-detail__avatar" aria-hidden="true">
-                {assignedInitials}
-              </span>
-              <span className="ticket-detail__assignee-name">{assignedName}</span>
-              {isAdmin && <span className="ticket-detail__assignee-action">Cambiar</span>}
-            </PopoverTrigger>
-            {isAdmin && (
-              <PopoverContent className="ticket-detail__assignee-popover">
-                <input
-                  type="text"
-                  placeholder="Buscar técnico..."
-                  value={assigneeQuery}
-                  onChange={(event) => setAssigneeQuery(event.target.value)}
-                />
-                <ul className="ticket-detail__assignee-list">
-                  {filteredAssignees.length === 0 && <li className="ticket-detail__assignee-empty">Sin resultados</li>}
-                  {filteredAssignees.map((assignee) => (
-                    <li key={assignee.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleAssignSelect(assignee.id)}
-                        className="ticket-detail__assignee-option"
-                      >
-                        {assignee.firstName} {assignee.lastName}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </PopoverContent>
-            )}
-          </Popover>
-        </div>
-        <div className="ticket-detail__meta">
-          <div className="ticket-detail__meta-item">
-            <span className="ticket-detail__meta-label">Type</span>
-            <span className="ticket-detail__meta-value">{ticket.ticketType.name}</span>
-          </div>
-          <div className="ticket-detail__meta-item">
-            <span className="ticket-detail__meta-label">Priority</span>
-            <span className="ticket-detail__meta-value">{ticket.priority.name}</span>
-          </div>
-          <div className="ticket-detail__meta-item">
-            <span className="ticket-detail__meta-label">State</span>
-            {(user?.role === 'ADMIN' || user?.role === 'TECH') ? (
-              <label className="ticket-detail__state-select">
-                <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
-                <select
-                  value={selectedStatusId || ticket.status.id}
-                  onChange={(event) => handleStatusSelect(event.target.value)}
-                >
-                  {statuses.map((status) => (
-                    <option key={status.id} value={status.id}>
-                      {status.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <div className="ticket-detail__state-readonly">
-                <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
-                <span>{ticket.status.name}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       <Tabs defaultValue="details" className="ticket-detail__tabs">
-        <TabsList className="ticket-detail__tabs-list">
-          <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="history" className="ticket-detail__tab ticket-detail__tab--icon" title="History">
-            <Clock size={16} />
-          </TabsTrigger>
-          <TabsTrigger value="attachments" className="ticket-detail__tab ticket-detail__tab--icon" title="Attachments">
-            <Paperclip size={16} />
-          </TabsTrigger>
-        </TabsList>
+        <div className="ticket-detail__header">
+          <div className="ticket-detail__header-left">
+            <h1>{ticket.title}</h1>
+            <div className="ticket-detail__assigned-row">
+              <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
+                <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
+                  <span className="ticket-detail__avatar" aria-hidden="true">
+                    {assignedInitials}
+                  </span>
+                  <span className="ticket-detail__assignee-name">{assignedName}</span>
+                  {isAdmin && <span className="ticket-detail__assignee-action">Cambiar</span>}
+                </PopoverTrigger>
+                {isAdmin && (
+                  <PopoverContent className="ticket-detail__assignee-popover">
+                    <input
+                      type="text"
+                      placeholder="Buscar técnico..."
+                      value={assigneeQuery}
+                      onChange={(event) => setAssigneeQuery(event.target.value)}
+                    />
+                    <ul className="ticket-detail__assignee-list">
+                      {filteredAssignees.length === 0 && (
+                        <li className="ticket-detail__assignee-empty">Sin resultados</li>
+                      )}
+                      {filteredAssignees.map((assignee) => (
+                        <li key={assignee.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleAssignSelect(assignee.id)}
+                            className="ticket-detail__assignee-option"
+                          >
+                            {assignee.firstName} {assignee.lastName}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </PopoverContent>
+                )}
+              </Popover>
+            </div>
+            <TabsList className="ticket-detail__tabs-list">
+              <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="history" className="ticket-detail__tab" title="History">
+                <Clock size={16} />
+                History
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="ticket-detail__tab" title="Attachments">
+                <Paperclip size={16} />
+                Attachments
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="ticket-detail__meta">
+            <div className="ticket-detail__meta-item">
+              <span className="ticket-detail__meta-label">Type</span>
+              <span className="ticket-detail__meta-value">{ticket.ticketType.name}</span>
+            </div>
+            <div className="ticket-detail__meta-item">
+              <span className="ticket-detail__meta-label">Priority</span>
+              <span className="ticket-detail__meta-value">{ticket.priority.name}</span>
+            </div>
+            <div className="ticket-detail__meta-item">
+              <span className="ticket-detail__meta-label">State</span>
+              {(user?.role === 'ADMIN' || user?.role === 'TECH') ? (
+                <label className="ticket-detail__state-row ticket-detail__state-select">
+                  <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
+                  <select
+                    className="ticket-detail__state-control"
+                    value={selectedStatusId || ticket.status.id}
+                    onChange={(event) => handleStatusSelect(event.target.value)}
+                  >
+                    {statuses.map((status) => (
+                      <option key={status.id} value={status.id}>
+                        {status.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <div className="ticket-detail__state-row ticket-detail__state-readonly">
+                  <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
+                  <span>{ticket.status.name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         <TabsContent value="details" className="ticket-detail__tab-panel">
           <div className="card">
