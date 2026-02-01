@@ -717,3 +717,237 @@ button.button-link:hover {
   color: #dc2626;
   font-size: 13px;
 }
+
+.ticket-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ticket-detail__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ticket-detail__title {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.ticket-detail__title h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #0f172a;
+}
+
+.ticket-detail__assignee {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticket-detail__label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ticket-detail__assignee-popover {
+  position: relative;
+  display: inline-flex;
+}
+
+.ticket-detail__assignee-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.ticket-detail__assignee-trigger--readonly {
+  cursor: default;
+}
+
+.ticket-detail__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: #1e293b;
+}
+
+.ticket-detail__assignee-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 240px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.ticket-detail__assignee-search {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.ticket-detail__assignee-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.ticket-detail__assignee-option {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ticket-detail__assignee-option:hover {
+  background: #e2e8f0;
+}
+
+.ticket-detail__assignee-empty {
+  font-size: 13px;
+  color: #94a3b8;
+  padding: 6px 4px;
+}
+
+.ticket-detail__meta {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.ticket-detail__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.ticket-detail__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-detail__state-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.ticket-detail__state-dot--open,
+.ticket-detail__state-dot--new {
+  background: #3b82f6;
+}
+
+.ticket-detail__state-dot--in-progress {
+  background: #f59e0b;
+}
+
+.ticket-detail__state-dot--resolved,
+.ticket-detail__state-dot--closed {
+  background: #16a34a;
+}
+
+.ticket-detail__state-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: #ffffff;
+}
+
+.ticket-detail__tabs {
+  display: inline-flex;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+  width: fit-content;
+}
+
+.ticket-detail__tab {
+  border: 0;
+  background: transparent;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  min-width: 44px;
+  height: 36px;
+}
+
+.ticket-detail__tab + .ticket-detail__tab {
+  border-left: 1px solid #e2e8f0;
+}
+
+.ticket-detail__tab.is-active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.ticket-detail__panel {
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .ticket-detail__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ticket-detail__meta {
+    width: 100%;
+  }
+
+  .ticket-detail__tabs {
+    width: 100%;
+  }
+}
