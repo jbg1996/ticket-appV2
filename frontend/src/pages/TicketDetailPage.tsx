@@ -1,5 +1,6 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import { Clock, Paperclip } from 'lucide-react';
 import { apiFetch, apiFetchBlob, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 
@@ -34,13 +35,15 @@ export function TicketDetailPage() {
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [assignees, setAssignees] = useState<User[]>([]);
-  const [selectedStatusId, setSelectedStatusId] = useState('');
-  const [assigneeId, setAssigneeId] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPriorityId, setEditPriorityId] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [activeTab, setActiveTab] = useState<'details' | 'history' | 'attachments'>('details');
+  const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState('');
 
   const isAdmin = user?.role === 'ADMIN';
+  const canEditStatus = user?.role === 'ADMIN' || user?.role === 'TECH';
 
   const loadTicket = () => {
     apiFetch<Ticket>(`/api/tickets/${id}`)
@@ -123,23 +126,22 @@ export function TicketDetailPage() {
     loadTicket();
   };
 
-  const handleAssign = async () => {
+  const handleAssign = async (assigneeId: string) => {
     if (!id || !assigneeId) return;
     await apiFetch(`/api/tickets/${id}/assign`, {
       method: 'POST',
       body: JSON.stringify({ assigneeId })
     });
-    setAssigneeId('');
+    setAssigneePopoverOpen(false);
     loadTicket();
   };
 
-  const handleStatusChange = async () => {
-    if (!id || !selectedStatusId) return;
+  const handleStatusChange = async (statusId: string) => {
+    if (!id || !statusId) return;
     await apiFetch(`/api/tickets/${id}/status`, {
       method: 'POST',
-      body: JSON.stringify({ statusId: selectedStatusId })
+      body: JSON.stringify({ statusId })
     });
-    setSelectedStatusId('');
     loadTicket();
   };
 
@@ -176,142 +178,243 @@ export function TicketDetailPage() {
     return <div className="page">Ticket not found.</div>;
   }
 
+  const assigneeInitials = ticket.assignedTo
+    ? `${ticket.assignedTo.firstName[0] ?? ''}${ticket.assignedTo.lastName[0] ?? ''}`.toUpperCase()
+    : 'NA';
+  const filteredAssignees = useMemo(() => {
+    if (!assigneeSearch) return assignees;
+    const query = assigneeSearch.toLowerCase();
+    return assignees.filter((assignee) => `${assignee.firstName} ${assignee.lastName}`.toLowerCase().includes(query));
+  }, [assignees, assigneeSearch]);
+  const statusClassName = ticket.status.name.toLowerCase().replace(/\s+/g, '-');
+
   return (
     <div className="page">
-      <h2>{ticket.title}</h2>
-      <p>{ticket.description}</p>
-      <div className="action-row">
-        <span className="badge">{ticket.status.name}</span>
-        <span className="badge">{ticket.priority.name}</span>
-        <span className="badge">{ticket.ticketType.name}</span>
-        <span className="badge">Assignee: {ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned'}</span>
+      <div className="ticket-detail">
+        <div className="ticket-detail__header">
+          <div className="ticket-detail__title">
+            <h1>{ticket.title}</h1>
+            <div className="ticket-detail__assignee">
+              <span className="ticket-detail__label">Assigned to</span>
+              {isAdmin ? (
+                <div className="ticket-detail__assignee-popover">
+                  <button
+                    type="button"
+                    className="ticket-detail__assignee-trigger"
+                    onClick={() => setAssigneePopoverOpen((open) => !open)}
+                    aria-haspopup="listbox"
+                    aria-expanded={assigneePopoverOpen}
+                  >
+                    <span className="ticket-detail__avatar">{assigneeInitials}</span>
+                    <span>
+                      {ticket.assignedTo
+                        ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}`
+                        : 'Unassigned'}
+                    </span>
+                  </button>
+                  {assigneePopoverOpen && (
+                    <div className="ticket-detail__assignee-menu" role="dialog">
+                      <input
+                        className="ticket-detail__assignee-search"
+                        placeholder="Search technicians"
+                        value={assigneeSearch}
+                        onChange={(event) => setAssigneeSearch(event.target.value)}
+                      />
+                      <ul className="ticket-detail__assignee-list" role="listbox">
+                        {filteredAssignees.map((assignee) => (
+                          <li key={assignee.id}>
+                            <button
+                              type="button"
+                              className="ticket-detail__assignee-option"
+                              onClick={() => handleAssign(assignee.id)}
+                            >
+                              {assignee.firstName} {assignee.lastName}
+                            </button>
+                          </li>
+                        ))}
+                        {!filteredAssignees.length && <li className="ticket-detail__assignee-empty">No matches</li>}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="ticket-detail__assignee-trigger ticket-detail__assignee-trigger--readonly">
+                  <span className="ticket-detail__avatar">{assigneeInitials}</span>
+                  <span>
+                    {ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="ticket-detail__meta">
+            <div className="ticket-detail__meta-item">
+              <span className="ticket-detail__label">Type</span>
+              <span>{ticket.ticketType.name}</span>
+            </div>
+            <div className="ticket-detail__meta-item">
+              <span className="ticket-detail__label">Priority</span>
+              <span>{ticket.priority.name}</span>
+            </div>
+            <div className="ticket-detail__meta-item">
+              <span className="ticket-detail__label">State</span>
+              <div className="ticket-detail__state">
+                <span className={`ticket-detail__state-dot ticket-detail__state-dot--${statusClassName}`} />
+                {canEditStatus ? (
+                  <select
+                    className="ticket-detail__state-select"
+                    value={ticket.status.id}
+                    onChange={(event) => handleStatusChange(event.target.value)}
+                  >
+                    {statuses.map((status) => (
+                      <option key={status.id} value={status.id}>
+                        {status.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span>{ticket.status.name}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="ticket-detail__tabs" role="tablist">
+          <button
+            type="button"
+            className={`ticket-detail__tab ${activeTab === 'details' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('details')}
+            role="tab"
+            aria-selected={activeTab === 'details'}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            className={`ticket-detail__tab ${activeTab === 'history' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('history')}
+            role="tab"
+            aria-label="History"
+            title="History"
+            aria-selected={activeTab === 'history'}
+          >
+            <Clock size={16} />
+          </button>
+          <button
+            type="button"
+            className={`ticket-detail__tab ${activeTab === 'attachments' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('attachments')}
+            role="tab"
+            aria-label="Attachments"
+            title="Attachments"
+            aria-selected={activeTab === 'attachments'}
+          >
+            <Paperclip size={16} />
+          </button>
+        </div>
       </div>
 
-      {isAdmin && (
-        <div className="card" style={{ marginTop: '16px' }}>
-          <h3>Admin Edit</h3>
-          <div className="grid">
-            <label>
-              Description
-              <textarea rows={3} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
-            </label>
-            <label>
-              Priority
-              <select value={editPriorityId} onChange={(event) => setEditPriorityId(event.target.value)}>
-                {priorities.map((priority) => (
-                  <option key={priority.id} value={priority.id}>
-                    {priority.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="action-row">
-              <button onClick={handleAdminUpdate}>Save Changes</button>
-              <button className="danger" onClick={handleAdminDelete}>Delete Ticket</button>
-            </div>
-            {adminError && <p className="form-error">{adminError}</p>}
+      {activeTab === 'details' && (
+        <>
+          <div className="card ticket-detail__panel">
+            <h3>Description</h3>
+            <p>{ticket.description}</p>
           </div>
+
+          {isAdmin && (
+            <div className="card ticket-detail__panel">
+              <h3>Admin Edit</h3>
+              <div className="grid">
+                <label>
+                  Description
+                  <textarea rows={3} value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+                </label>
+                <label>
+                  Priority
+                  <select value={editPriorityId} onChange={(event) => setEditPriorityId(event.target.value)}>
+                    {priorities.map((priority) => (
+                      <option key={priority.id} value={priority.id}>
+                        {priority.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="action-row">
+                  <button onClick={handleAdminUpdate}>Save Changes</button>
+                  <button className="danger" onClick={handleAdminDelete}>Delete Ticket</button>
+                </div>
+                {adminError && <p className="form-error">{adminError}</p>}
+              </div>
+            </div>
+          )}
+
+          <div className="card ticket-detail__panel">
+            <h3>Info Requests</h3>
+            {user?.role !== 'REQUESTER' && (
+              <div className="grid">
+                <textarea rows={2} value={infoMessage} onChange={(event) => setInfoMessage(event.target.value)} />
+                <input
+                  placeholder="Requested fields (comma separated)"
+                  value={requestedFields}
+                  onChange={(event) => setRequestedFields(event.target.value)}
+                />
+                <button onClick={handleRequestInfo}>Request Info</button>
+              </div>
+            )}
+            {ticket.infoRequests.map((request) => (
+              <div key={request.id} style={{ marginTop: '12px' }}>
+                <p>
+                  <strong>{request.requesterTech.firstName}</strong>: {request.message} ({request.status})
+                </p>
+                {request.responses.map((response) => (
+                  <p key={response.id}>
+                    <em>{response.responder.firstName}:</em> {response.message}
+                  </p>
+                ))}
+                <div className="grid">
+                  <textarea rows={2} value={responseMessage} onChange={(event) => setResponseMessage(event.target.value)} />
+                  <input type="file" onChange={(event) => setResponseFile(event.target.files?.[0] ?? null)} />
+                  <button onClick={() => handleRespondInfo(request.id)}>Respond</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'history' && (
+        <div className="card ticket-detail__panel">
+          <h3>History</h3>
+          <div className="grid" style={{ marginBottom: '12px' }}>
+            <textarea rows={2} value={comment} onChange={(event) => setComment(event.target.value)} />
+            <button onClick={handleComment}>Add Comment</button>
+          </div>
+          <ul>
+            {ticket.history.map((history) => (
+              <li key={history.id}>
+                {history.createdAt}: {history.eventType} - {history.message ?? ''} by {history.actor.firstName}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      <div className="card" style={{ marginTop: '16px' }}>
-        <h3>Attachments</h3>
-        <input type="file" onChange={handleUpload} />
-        <ul>
-          {ticket.attachments.map((attachment) => (
-            <li key={attachment.id}>
-              <button className="secondary" onClick={() => handleDownload(attachment.id, attachment.originalName)}>
-                Download {attachment.originalName}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="card" style={{ marginTop: '16px' }}>
-        <h3>Actions</h3>
-        <div className="grid">
-          {(user?.role === 'ADMIN' || user?.role === 'TECH') && (
-            <>
-              <label>
-                Change Status
-                <select value={selectedStatusId} onChange={(event) => setSelectedStatusId(event.target.value)}>
-                  <option value="">Select status</option>
-                  {statuses.map((status) => (
-                    <option key={status.id} value={status.id}>
-                      {status.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button onClick={handleStatusChange}>Update Status</button>
-            </>
-          )}
-          {isAdmin && (
-            <>
-              <label>
-                Assign to Tech
-                <select value={assigneeId} onChange={(event) => setAssigneeId(event.target.value)}>
-                  <option value="">Select user</option>
-                  {assignees.map((assignee) => (
-                    <option key={assignee.id} value={assignee.id}>
-                      {assignee.firstName} {assignee.lastName} ({assignee.userType.name})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button onClick={handleAssign}>Assign</button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: '16px' }}>
-        <h3>Info Requests</h3>
-        {user?.role !== 'REQUESTER' && (
-          <div className="grid">
-            <textarea rows={2} value={infoMessage} onChange={(event) => setInfoMessage(event.target.value)} />
-            <input
-              placeholder="Requested fields (comma separated)"
-              value={requestedFields}
-              onChange={(event) => setRequestedFields(event.target.value)}
-            />
-            <button onClick={handleRequestInfo}>Request Info</button>
-          </div>
-        )}
-        {ticket.infoRequests.map((request) => (
-          <div key={request.id} style={{ marginTop: '12px' }}>
-            <p>
-              <strong>{request.requesterTech.firstName}</strong>: {request.message} ({request.status})
-            </p>
-            {request.responses.map((response) => (
-              <p key={response.id}>
-                <em>{response.responder.firstName}:</em> {response.message}
-              </p>
+      {activeTab === 'attachments' && (
+        <div className="card ticket-detail__panel">
+          <h3>Attachments</h3>
+          <input type="file" onChange={handleUpload} />
+          <ul>
+            {ticket.attachments.map((attachment) => (
+              <li key={attachment.id}>
+                <button className="secondary" onClick={() => handleDownload(attachment.id, attachment.originalName)}>
+                  Download {attachment.originalName}
+                </button>
+              </li>
             ))}
-            <div className="grid">
-              <textarea rows={2} value={responseMessage} onChange={(event) => setResponseMessage(event.target.value)} />
-              <input type="file" onChange={(event) => setResponseFile(event.target.files?.[0] ?? null)} />
-              <button onClick={() => handleRespondInfo(request.id)}>Respond</button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card" style={{ marginTop: '16px' }}>
-        <h3>History</h3>
-        <div className="grid" style={{ marginBottom: '12px' }}>
-          <textarea rows={2} value={comment} onChange={(event) => setComment(event.target.value)} />
-          <button onClick={handleComment}>Add Comment</button>
+          </ul>
         </div>
-        <ul>
-          {ticket.history.map((history) => (
-            <li key={history.id}>
-              {history.createdAt}: {history.eventType} - {history.message ?? ''} by {history.actor.firstName}
-            </li>
-          ))}
-        </ul>
-      </div>
+      )}
     </div>
   );
 }
