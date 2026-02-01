@@ -413,6 +413,240 @@ nav a {
   min-height: 100%;
 }
 
+.ticket-detail {
+  gap: 24px;
+}
+
+.ticket-detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+}
+
+.ticket-detail__title {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.ticket-detail__title h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.ticket-detail__assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.ticket-detail__assignee-action {
+  font-size: 12px;
+  color: #2563eb;
+}
+
+.ticket-detail__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.ticket-detail__assignee-name {
+  font-weight: 600;
+}
+
+.ticket-detail__assignee-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 240px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+}
+
+.ticket-detail__assignee-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ticket-detail__assignee-option {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #0f172a;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.ticket-detail__assignee-option:hover {
+  background: #e2e8f0;
+}
+
+.ticket-detail__assignee-empty {
+  font-size: 13px;
+  color: #94a3b8;
+  padding: 4px 6px;
+}
+
+.ticket-detail__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.ticket-detail__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticket-detail__meta-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ticket-detail__meta-value {
+  font-weight: 600;
+}
+
+.ticket-detail__state-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket-detail__state-select select {
+  width: auto;
+  min-width: 140px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.ticket-detail__state-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.ticket-detail__state-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.ticket-detail__state-dot--open {
+  background: #3b82f6;
+}
+
+.ticket-detail__state-dot--progress {
+  background: #f97316;
+}
+
+.ticket-detail__state-dot--closed {
+  background: #16a34a;
+}
+
+.ticket-detail__state-dot--default {
+  background: #94a3b8;
+}
+
+.ticket-detail__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ticket-detail__tabs-list {
+  display: inline-flex;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  background: #f8fafc;
+  width: fit-content;
+}
+
+.ticket-detail__tab {
+  background: transparent;
+  color: #334155;
+  border-radius: 0;
+  padding: 8px 14px;
+  font-weight: 500;
+}
+
+.ticket-detail__tab--icon {
+  width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.ticket-detail__tab[data-state='active'] {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.ticket-detail__tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .ticket-detail__header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .ticket-detail__title {
+    flex: 1;
+  }
+
+  .ticket-detail__meta {
+    max-width: 420px;
+  }
+}
+
 .page--centered {
   align-items: center;
   justify-content: center;

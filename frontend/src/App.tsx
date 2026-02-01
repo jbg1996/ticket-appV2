@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './components/AuthProvider';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -46,7 +47,14 @@ function AppShell() {
           <Route path="/recent" element={<RecentTicketsPage />} />
           <Route path="/tickets" element={<TicketsPage />} />
           <Route path="/tickets/new" element={<CreateTicketPage />} />
-          <Route path="/tickets/:id" element={<TicketDetailPage />} />
+          <Route
+            path="/tickets/:id"
+            element={(
+              <ErrorBoundary>
+                <TicketDetailPage />
+              </ErrorBoundary>
+            )}
+          />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route
