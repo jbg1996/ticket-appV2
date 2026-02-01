@@ -293,42 +293,39 @@ export function TicketDetailPage() {
               <h1>{ticket.title}</h1>
             </div>
             <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
-              <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
-                <span className="ticket-detail__avatar" aria-hidden="true">
-                  {assignedInitials}
-                </span>
-                <span className="ticket-detail__assignee-name">{assignedName}</span>
-                {isAdmin && <span className="ticket-detail__assignee-action">Cambiar</span>}
-              </PopoverTrigger>
-              {isAdmin && (
-                <PopoverContent
-                  side="bottom"
-                  align="start"
-                  sideOffset={6}
-                  className="ticket-detail__assignee-popover z-50"
-                >
-                  <input
-                    type="text"
-                    placeholder="Buscar técnico..."
-                    value={assigneeQuery}
-                    onChange={(event) => setAssigneeQuery(event.target.value)}
-                  />
-                  <ul className="ticket-detail__assignee-list">
-                    {filteredAssignees.length === 0 && <li className="ticket-detail__assignee-empty">Sin resultados</li>}
-                    {filteredAssignees.map((assignee) => (
-                      <li key={assignee.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleAssignSelect(assignee.id)}
-                          className="ticket-detail__assignee-option"
-                        >
-                          {assignee.firstName} {assignee.lastName}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </PopoverContent>
-              )}
+              <div className="ticket-detail__assignee-wrapper">
+                <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
+                  <span className="ticket-detail__avatar" aria-hidden="true">
+                    {assignedInitials}
+                  </span>
+                  <span className="ticket-detail__assignee-name">{assignedName}</span>
+                  {isAdmin && <span className="ticket-detail__assignee-action">Cambiar</span>}
+                </PopoverTrigger>
+                {isAdmin && (
+                  <PopoverContent className="ticket-detail__assignee-popover">
+                    <input
+                      type="text"
+                      placeholder="Buscar técnico..."
+                      value={assigneeQuery}
+                      onChange={(event) => setAssigneeQuery(event.target.value)}
+                    />
+                    <ul className="ticket-detail__assignee-list">
+                      {filteredAssignees.length === 0 && <li className="ticket-detail__assignee-empty">Sin resultados</li>}
+                      {filteredAssignees.map((assignee) => (
+                        <li key={assignee.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleAssignSelect(assignee.id)}
+                            className="ticket-detail__assignee-option"
+                          >
+                            {assignee.firstName} {assignee.lastName}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </PopoverContent>
+                )}
+              </div>
             </Popover>
             <TabsList className="ticket-detail__tabs-list">
               <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
