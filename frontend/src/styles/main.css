@@ -481,9 +481,6 @@ nav a {
 }
 
 .ticket-detail__assignee-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
   width: 240px;
   padding: 12px;
   border-radius: 12px;

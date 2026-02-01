@@ -301,7 +301,12 @@ export function TicketDetailPage() {
                 {isAdmin && <span className="ticket-detail__assignee-action">Cambiar</span>}
               </PopoverTrigger>
               {isAdmin && (
-                <PopoverContent className="ticket-detail__assignee-popover">
+                <PopoverContent
+                  side="bottom"
+                  align="start"
+                  sideOffset={6}
+                  className="ticket-detail__assignee-popover z-50"
+                >
                   <input
                     type="text"
                     placeholder="Buscar técnico..."
