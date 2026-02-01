@@ -427,11 +427,20 @@ nav a {
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
 }
 
+.ticket-detail__header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .ticket-detail__title {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   position: relative;
+  flex: 1;
+  min-width: 220px;
 }
 
 .ticket-detail__title h1 {
@@ -545,10 +554,14 @@ nav a {
   font-weight: 600;
 }
 
-.ticket-detail__state-select {
+.ticket-detail__state-row {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.ticket-detail__state-select {
+  width: fit-content;
 }
 
 .ticket-detail__state-select select {
@@ -602,22 +615,26 @@ nav a {
   overflow: hidden;
   background: #f8fafc;
   width: fit-content;
+  margin-left: auto;
 }
 
 .ticket-detail__tab {
   background: transparent;
   color: #334155;
   border-radius: 0;
-  padding: 8px 14px;
+  padding: 0 14px;
   font-weight: 500;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .ticket-detail__tab--icon {
-  width: 40px;
+  width: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 0;
 }
 
 .ticket-detail__tab[data-state='active'] {
@@ -638,8 +655,9 @@ nav a {
     justify-content: space-between;
   }
 
-  .ticket-detail__title {
+  .ticket-detail__header-top {
     flex: 1;
+    align-items: center;
   }
 
   .ticket-detail__meta {
