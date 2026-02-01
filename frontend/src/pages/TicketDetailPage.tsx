@@ -179,14 +179,15 @@ export function TicketDetailPage() {
   }
 
   const assigneeInitials = ticket.assignedTo
-    ? `${ticket.assignedTo.firstName[0] ?? ''}${ticket.assignedTo.lastName[0] ?? ''}`.toUpperCase()
+    ? `${ticket.assignedTo.firstName?.[0] ?? ''}${ticket.assignedTo.lastName?.[0] ?? ''}`.toUpperCase()
     : 'NA';
   const filteredAssignees = useMemo(() => {
     if (!assigneeSearch) return assignees;
     const query = assigneeSearch.toLowerCase();
     return assignees.filter((assignee) => `${assignee.firstName} ${assignee.lastName}`.toLowerCase().includes(query));
   }, [assignees, assigneeSearch]);
-  const statusClassName = ticket.status.name.toLowerCase().replace(/\s+/g, '-');
+  const statusName = ticket.status?.name ?? 'Unknown';
+  const statusClassName = statusName.toLowerCase().replace(/\s+/g, '-');
 
   return (
     <div className="page">
@@ -208,7 +209,7 @@ export function TicketDetailPage() {
                     <span className="ticket-detail__avatar">{assigneeInitials}</span>
                     <span>
                       {ticket.assignedTo
-                        ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}`
+                        ? `${ticket.assignedTo.firstName ?? ''} ${ticket.assignedTo.lastName ?? ''}`.trim()
                         : 'Unassigned'}
                     </span>
                   </button>
@@ -241,7 +242,9 @@ export function TicketDetailPage() {
                 <div className="ticket-detail__assignee-trigger ticket-detail__assignee-trigger--readonly">
                   <span className="ticket-detail__avatar">{assigneeInitials}</span>
                   <span>
-                    {ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned'}
+                    {ticket.assignedTo
+                      ? `${ticket.assignedTo.firstName ?? ''} ${ticket.assignedTo.lastName ?? ''}`.trim()
+                      : 'Unassigned'}
                   </span>
                 </div>
               )}
@@ -263,7 +266,7 @@ export function TicketDetailPage() {
                 {canEditStatus ? (
                   <select
                     className="ticket-detail__state-select"
-                    value={ticket.status.id}
+                    value={ticket.status?.id ?? ''}
                     onChange={(event) => handleStatusChange(event.target.value)}
                   >
                     {statuses.map((status) => (
@@ -273,7 +276,7 @@ export function TicketDetailPage() {
                     ))}
                   </select>
                 ) : (
-                  <span>{ticket.status.name}</span>
+                  <span>{statusName}</span>
                 )}
               </div>
             </div>
