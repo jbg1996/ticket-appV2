@@ -29,6 +29,8 @@ export function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState('');
   const [requestedFields, setRequestedFields] = useState('');
   const [responseMessage, setResponseMessage] = useState('');
@@ -46,18 +48,65 @@ export function TicketDetailPage() {
 
   const isAdmin = user?.role === 'ADMIN';
 
-  const loadTicket = () => {
-    apiFetch<Ticket>(`/api/tickets/${id}`)
-      .then((data) => {
-        setTicket(data);
-        setEditDescription(data.description);
-        setEditPriorityId(data.priority.id);
-      })
-      .catch(() => setTicket(null));
+  const loadTicket = async () => {
+    if (!id) {
+      setTicket(null);
+      setError('Ticket not found.');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch<Ticket>(`/api/tickets/${id}`);
+      setTicket(data);
+      setEditDescription(data.description);
+      setEditPriorityId(data.priority.id);
+    } catch (fetchError) {
+      const message = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+      setTicket(null);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadTicket();
+    let cancelled = false;
+    const fetchTicket = async () => {
+      if (!id) {
+        if (!cancelled) {
+          setTicket(null);
+          setError('Ticket not found.');
+          setLoading(false);
+        }
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await apiFetch<Ticket>(`/api/tickets/${id}`);
+        if (cancelled) return;
+        setTicket(data);
+        setEditDescription(data.description);
+        setEditPriorityId(data.priority.id);
+      } catch (fetchError) {
+        if (cancelled) return;
+        const message = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+        setTicket(null);
+        setError(message);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTicket();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -178,8 +227,38 @@ export function TicketDetailPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="card">
+          <h2>Loading ticket...</h2>
+          <p>Fetching ticket details.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page">
+        <div className="card">
+          <h2>Error loading ticket</h2>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()}>Reload</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!ticket) {
-    return <div className="page">Ticket not found.</div>;
+    return (
+      <div className="page">
+        <div className="card">
+          <h2>Ticket not found.</h2>
+          <p>The ticket could not be loaded.</p>
+        </div>
+      </div>
+    );
   }
 
   const assignedName = ticket.assignedTo
