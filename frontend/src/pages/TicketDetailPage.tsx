@@ -288,9 +288,32 @@ export function TicketDetailPage() {
     <div className="page ticket-detail">
       <Tabs defaultValue="details" className="ticket-detail__tabs">
         <div className="ticket-detail__header">
-          <div className="ticket-detail__header-top">
-            <div className="ticket-detail__title">
+          <div className="ticket-detail__header-left">
+            <div className="ticket-detail__title-row">
               <h1>{ticket.title}</h1>
+              <TabsList className="ticket-detail__tabs-list">
+                <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
+                  Details
+                </TabsTrigger>
+                <TabsTrigger
+                  value="history"
+                  className="ticket-detail__tab ticket-detail__tab--icon"
+                  title="History"
+                  aria-label="History"
+                >
+                  <Clock size={16} />
+                </TabsTrigger>
+                <TabsTrigger
+                  value="attachments"
+                  className="ticket-detail__tab ticket-detail__tab--icon"
+                  title="Attachments"
+                  aria-label="Attachments"
+                >
+                  <Paperclip size={16} />
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <div className="ticket-detail__assigned-row">
               <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
                 <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
                   <span className="ticket-detail__avatar" aria-hidden="true">
@@ -327,27 +350,6 @@ export function TicketDetailPage() {
                 )}
               </Popover>
             </div>
-            <TabsList className="ticket-detail__tabs-list">
-              <TabsTrigger value="details" className="ticket-detail__tab" title="Details">
-                Details
-              </TabsTrigger>
-              <TabsTrigger
-                value="history"
-                className="ticket-detail__tab ticket-detail__tab--icon"
-                title="History"
-                aria-label="History"
-              >
-                <Clock size={16} />
-              </TabsTrigger>
-              <TabsTrigger
-                value="attachments"
-                className="ticket-detail__tab ticket-detail__tab--icon"
-                title="Attachments"
-                aria-label="Attachments"
-              >
-                <Paperclip size={16} />
-              </TabsTrigger>
-            </TabsList>
           </div>
           <div className="ticket-detail__meta">
             <div className="ticket-detail__meta-item">
@@ -364,6 +366,7 @@ export function TicketDetailPage() {
                 <label className="ticket-detail__state-row ticket-detail__state-select">
                   <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
                   <select
+                    className="ticket-detail__state-control"
                     value={selectedStatusId || ticket.status.id}
                     onChange={(event) => handleStatusSelect(event.target.value)}
                   >
