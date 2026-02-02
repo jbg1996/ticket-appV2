@@ -485,18 +485,23 @@ export function TicketDetailPage() {
             <ul>
               {ticket.attachments.map((attachment) => (
                 <li key={attachment.id}>
-                  <button className="secondary" onClick={() => handleDownload(attachment.id, attachment.originalName)}>
-                    Download {attachment.originalName}
-                  </button>
-                  {canDeleteAttachment && (
+                  <div className="inline-flex items-center gap-2">
                     <button
-                      className="danger"
-                      onClick={() => handleDeleteAttachment(attachment.id, attachment.originalName)}
-                      type="button"
+                      className="secondary h-9 px-3 text-sm"
+                      onClick={() => handleDownload(attachment.id, attachment.originalName)}
                     >
-                      <Trash2 size={16} /> Delete
+                      Download {attachment.originalName}
                     </button>
-                  )}
+                    {canDeleteAttachment && (
+                      <button
+                        className="danger h-9 px-3 text-sm"
+                        onClick={() => handleDeleteAttachment(attachment.id, attachment.originalName)}
+                        type="button"
+                      >
+                        <Trash2 size={16} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
