@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { Clock, Paperclip } from 'lucide-react';
+import { Clock, Paperclip, Trash2 } from 'lucide-react';
 import { apiFetch, apiFetchBlob, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
@@ -43,10 +43,12 @@ export function TicketDetailPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editPriorityId, setEditPriorityId] = useState('');
   const [adminError, setAdminError] = useState('');
+  const [attachmentError, setAttachmentError] = useState('');
   const [assigneeQuery, setAssigneeQuery] = useState('');
   const [assigneeOpen, setAssigneeOpen] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
+  const canDeleteAttachment = user?.role === 'ADMIN' || user?.role === 'TECH';
 
   const loadTicket = async () => {
     if (!id) {
@@ -172,6 +174,20 @@ export function TicketDetailPage() {
     link.download = originalName;
     link.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string, originalName: string) => {
+    if (!id) return;
+    setAttachmentError('');
+    if (!window.confirm(`Delete attachment "${originalName}"? This action cannot be undone.`)) return;
+    try {
+      await apiFetch(`/api/tickets/${id}/attachments/${attachmentId}`, { method: 'DELETE' });
+      setTicket((current) =>
+        current ? { ...current, attachments: current.attachments.filter((attachment) => attachment.id !== attachmentId) } : current
+      );
+    } catch (deleteError) {
+      setAttachmentError(deleteError instanceof Error ? deleteError.message : 'No autorizado');
+    }
   };
 
   const handleComment = async () => {
@@ -465,12 +481,27 @@ export function TicketDetailPage() {
           <div className="card">
             <h3>Attachments</h3>
             <input type="file" onChange={handleUpload} />
+            {attachmentError && <p className="form-error">{attachmentError}</p>}
             <ul>
               {ticket.attachments.map((attachment) => (
                 <li key={attachment.id}>
-                  <button className="secondary" onClick={() => handleDownload(attachment.id, attachment.originalName)}>
-                    Download {attachment.originalName}
-                  </button>
+                  <div className="inline-flex items-center gap-2">
+                    <button
+                      className="secondary h-9 px-3 text-sm"
+                      onClick={() => handleDownload(attachment.id, attachment.originalName)}
+                    >
+                      Download {attachment.originalName}
+                    </button>
+                    {canDeleteAttachment && (
+                      <button
+                        className="danger h-9 px-3 text-sm"
+                        onClick={() => handleDeleteAttachment(attachment.id, attachment.originalName)}
+                        type="button"
+                      >
+                        <Trash2 size={16} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
