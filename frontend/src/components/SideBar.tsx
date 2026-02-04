@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import { ReportIcon } from './icons/ReportIcon';
 
 const SIDEBAR_STORAGE_KEY = 'sidebarCollapsed';
 
@@ -37,14 +38,7 @@ const icons = {
       <path d="M17 9v6" />
     </svg>
   ),
-  report: (
-    <svg {...iconProps} aria-hidden="true">
-      <path d="M4 4h16v16H4z" />
-      <path d="M8 16V8" />
-      <path d="M12 16V12" />
-      <path d="M16 16V6" />
-    </svg>
-  ),
+  report: <ReportIcon size={20} />,
   users: (
     <svg {...iconProps} aria-hidden="true">
       <circle cx="9" cy="8" r="3" />

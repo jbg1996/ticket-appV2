@@ -40,9 +40,10 @@ import {
   requestInfo,
   respondInfo,
   deleteTicket,
+  deleteTicketsBulk,
   addComment
 } from './controllers/ticketController.js';
-import { uploadAttachment, downloadAttachment } from './controllers/attachmentController.js';
+import { uploadAttachment, downloadAttachment, deleteAttachment } from './controllers/attachmentController.js';
 import { generateReportHandler, listReports, downloadReport, deleteReport } from './controllers/reportController.js';
 import { getHeaderColor, updateHeaderColor } from './controllers/settingsController.js';
 import { generateReport } from './services/reportService.js';
@@ -177,10 +178,12 @@ app.post('/api/tickets/:id/comment', requireAuth, async (req, res, next) => {
     next(error as Error);
   }
 });
+app.delete('/api/tickets/bulk', requireAuth, requireAdminRole, deleteTicketsBulk);
 app.delete('/api/tickets/:id', requireAuth, requireAdminRole, deleteTicket);
 
 app.post('/api/tickets/:id/attachments', requireAuth, upload.single('file'), uploadAttachment);
 app.get('/api/attachments/:id/download', requireAuth, downloadAttachment);
+app.delete('/api/tickets/:ticketId/attachments/:attachmentId', requireAuth, deleteAttachment);
 
 app.post('/api/reports', requireAuth, requireAdminRole, generateReportHandler);
 app.post('/api/reports/generate', requireAuth, requireAdminRole, generateReportHandler);
