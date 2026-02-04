@@ -4,16 +4,9 @@ import prisma from '../prisma/client.js';
 import { addHistory } from '../services/historyService.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { buildTicketQuery, ColumnFilterInput } from '../utils/ticketQueryBuilder.js';
+import { parseId, parseOptionalId } from '../utils/parseId.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-function parseTicketId(id: string): number | null {
-  const parsed = Number(id);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}
 
 export async function listTickets(req: AuthRequest, res: Response) {
   const {
@@ -40,11 +33,32 @@ export async function listTickets(req: AuthRequest, res: Response) {
   } = req.query as Record<string, string>;
 
   const baseWhere: Prisma.TicketWhereInput = {};
-  if (statusId) baseWhere.statusId = statusId;
-  if (priorityId) baseWhere.priorityId = priorityId;
-  if (ticketTypeId || typeId) baseWhere.ticketTypeId = ticketTypeId ?? typeId;
-  if (assignedToId) baseWhere.assignedToId = assignedToId;
-  if (createdById) baseWhere.createdById = createdById;
+  const parsedStatusId = parseOptionalId(statusId);
+  if (statusId && !parsedStatusId) {
+    return res.status(400).json({ message: 'Invalid status id.' });
+  }
+  if (parsedStatusId) baseWhere.statusId = parsedStatusId;
+  const parsedPriorityId = parseOptionalId(priorityId);
+  if (priorityId && !parsedPriorityId) {
+    return res.status(400).json({ message: 'Invalid priority id.' });
+  }
+  if (parsedPriorityId) baseWhere.priorityId = parsedPriorityId;
+  const rawTicketTypeId = ticketTypeId ?? typeId;
+  const parsedTicketTypeId = parseOptionalId(rawTicketTypeId);
+  if (rawTicketTypeId && !parsedTicketTypeId) {
+    return res.status(400).json({ message: 'Invalid ticket type id.' });
+  }
+  if (parsedTicketTypeId) baseWhere.ticketTypeId = parsedTicketTypeId;
+  const parsedAssignedToId = parseOptionalId(assignedToId);
+  if (assignedToId && !parsedAssignedToId) {
+    return res.status(400).json({ message: 'Invalid assignee id.' });
+  }
+  if (parsedAssignedToId) baseWhere.assignedToId = parsedAssignedToId;
+  const parsedCreatedById = parseOptionalId(createdById);
+  if (createdById && !parsedCreatedById) {
+    return res.status(400).json({ message: 'Invalid creator id.' });
+  }
+  if (parsedCreatedById) baseWhere.createdById = parsedCreatedById;
   if (assignedToMe === 'true' && req.user) baseWhere.assignedToId = req.user.id;
   if (createdByMe === 'true' && req.user) baseWhere.createdById = req.user.id;
 
@@ -173,7 +187,7 @@ export async function listRecentTickets(req: AuthRequest, res: Response) {
 }
 
 export async function getTicket(req: Request, res: Response) {
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
@@ -201,12 +215,23 @@ export async function createTicket(req: AuthRequest, res: Response) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
   const { ticketTypeId, description, priorityId, title2 } = req.body as {
-    ticketTypeId: string;
+    ticketTypeId: number;
     description: string;
-    priorityId?: string;
+    priorityId?: number;
     title2?: string;
   };
-  const ticketType = await prisma.ticketType.findUnique({ where: { id: ticketTypeId }, include: { defaultPriority: true } });
+  const parsedTicketTypeId = parseId(ticketTypeId);
+  const parsedPriorityId = parseOptionalId(priorityId);
+  if (!parsedTicketTypeId) {
+    return res.status(400).json({ message: 'Invalid ticket type id.' });
+  }
+  if (priorityId && !parsedPriorityId) {
+    return res.status(400).json({ message: 'Invalid priority id.' });
+  }
+  const ticketType = await prisma.ticketType.findUnique({
+    where: { id: parsedTicketTypeId },
+    include: { defaultPriority: true }
+  });
   const status = await prisma.status.findFirst({ where: { name: 'Nuevo' } });
   if (!ticketType || !status) {
     return res.status(400).json({ message: 'Invalid ticket type or status.' });
@@ -215,13 +240,13 @@ export async function createTicket(req: AuthRequest, res: Response) {
   if (!title) {
     return res.status(400).json({ message: 'Custom title required for OTROS.' });
   }
-  const usePriority = req.user.role === 'REQUESTER' ? ticketType.defaultPriorityId : (priorityId ?? ticketType.defaultPriorityId);
+  const usePriority = req.user.role === 'REQUESTER' ? ticketType.defaultPriorityId : (parsedPriorityId ?? ticketType.defaultPriorityId);
   const alreadyPrefixed = /^TM\d{9}\s-\s/i.test(title);
 
   const ticket = await prisma.$transaction(async (tx) => {
     const created = await tx.ticket.create({
       data: {
-        ticketTypeId,
+        ticketTypeId: parsedTicketTypeId,
         title,
         description,
         priorityId: usePriority,
@@ -254,23 +279,27 @@ export async function updateTicket(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const { description, priorityId } = req.body as { description?: string; priorityId?: string };
+  const { description, priorityId } = req.body as { description?: string; priorityId?: number };
+  const parsedPriorityId = parseOptionalId(priorityId);
+  if (priorityId && !parsedPriorityId) {
+    return res.status(400).json({ message: 'Invalid priority id.' });
+  }
   const ticket = await prisma.ticket.findUnique({ where: { id: parsedId } });
   if (!ticket) {
     return res.status(404).json({ message: 'Ticket not found.' });
   }
-  const updates: { description?: string; priorityId?: string; updatedById: string } = {
+  const updates: { description?: string; priorityId?: number; updatedById: number } = {
     updatedById: req.user.id
   };
   if (description) {
     updates.description = description;
   }
-  if (priorityId) {
-    updates.priorityId = priorityId;
+  if (parsedPriorityId) {
+    updates.priorityId = parsedPriorityId;
   }
   if (!updates.description && !updates.priorityId) {
     return res.status(400).json({ message: 'Provide fields to update.' });
@@ -301,21 +330,25 @@ export async function assignTicket(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const { assigneeId } = req.body as { assigneeId: string };
+  const { assigneeId } = req.body as { assigneeId: number };
+  const parsedAssigneeId = parseId(assigneeId);
+  if (!parsedAssigneeId) {
+    return res.status(400).json({ message: 'Invalid assignee id.' });
+  }
   const ticket = await prisma.ticket.update({
     where: { id: parsedId },
-    data: { assignedToId: assigneeId, updatedById: req.user.id }
+    data: { assignedToId: parsedAssigneeId, updatedById: req.user.id }
   });
   await addHistory({
     ticketId: parsedId,
     actorId: req.user.id,
     eventType: 'ASSIGNED',
     message: 'Ticket assigned',
-    data: { assigneeId }
+    data: { assigneeId: parsedAssigneeId }
   });
   res.json(ticket);
 }
@@ -324,13 +357,17 @@ export async function changeStatus(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const { statusId } = req.body as { statusId: string };
+  const { statusId } = req.body as { statusId: number };
+  const parsedStatusId = parseId(statusId);
+  if (!parsedStatusId) {
+    return res.status(400).json({ message: 'Invalid status id.' });
+  }
   const [status, currentTicket] = await Promise.all([
-    prisma.status.findUnique({ where: { id: statusId } }),
+    prisma.status.findUnique({ where: { id: parsedStatusId } }),
     prisma.ticket.findUnique({ where: { id: parsedId }, include: { status: true } })
   ]);
   if (!status || !currentTicket) {
@@ -351,7 +388,7 @@ export async function changeStatus(req: AuthRequest, res: Response) {
   const ticket = await prisma.ticket.update({
     where: { id: parsedId },
     data: {
-      statusId,
+      statusId: parsedStatusId,
       resolvedAt: status.name === 'Resuelto' ? new Date() : undefined,
       updatedById: req.user.id
     }
@@ -361,7 +398,7 @@ export async function changeStatus(req: AuthRequest, res: Response) {
     actorId: req.user.id,
     eventType: 'STATUS_CHANGED',
     message: `Status changed to ${status.name}`,
-    data: { statusId }
+    data: { statusId: parsedStatusId }
   });
   res.json(ticket);
 }
@@ -370,7 +407,7 @@ export async function requestInfo(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
@@ -397,16 +434,19 @@ export async function respondInfo(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const { id } = req.params;
+  const parsedInfoRequestId = parseId(req.params.id);
+  if (!parsedInfoRequestId) {
+    return res.status(400).json({ message: 'Invalid info request id.' });
+  }
   const { message } = req.body as { message: string };
   const response = await prisma.infoResponse.create({
     data: {
-      infoRequestId: id,
+      infoRequestId: parsedInfoRequestId,
       responderId: req.user.id,
       message
     }
   });
-  const infoRequest = await prisma.infoRequest.findUnique({ where: { id } });
+  const infoRequest = await prisma.infoRequest.findUnique({ where: { id: parsedInfoRequestId } });
   if (infoRequest && req.file) {
     await prisma.attachment.create({
       data: {
@@ -440,7 +480,7 @@ export async function deleteTicket(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
@@ -517,7 +557,7 @@ export async function addComment(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }

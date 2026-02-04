@@ -4,6 +4,7 @@ import prisma from '../prisma/client.js';
 import { generateReport } from '../services/reportService.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { buildTicketQuery, parseTicketQuery } from '../utils/ticketQueryBuilder.js';
+import { parseId } from '../utils/parseId.js';
 
 type ReportPreset = 'TODAY' | 'THIS_MONTH' | 'YTD' | 'CUSTOM';
 
@@ -185,12 +186,15 @@ export async function listReports(_req: AuthRequest, res: Response) {
 }
 
 export async function downloadReport(req: AuthRequest, res: Response) {
-  const { id } = req.params;
-  const report = await prisma.report.findUnique({ where: { id } });
+  const parsedId = parseId(req.params.id);
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid report id.' });
+  }
+  const report = await prisma.report.findUnique({ where: { id: parsedId } });
   if (!report) {
     return res.status(404).json({ message: 'Report not found.' });
   }
-  console.info(`Report download requested`, { reportId: id, status: report.status });
+  console.info(`Report download requested`, { reportId: parsedId, status: report.status });
   if (report.status === 'PENDING') {
     return res.status(409).json({ message: 'Report is being generated', status: 'PENDING' });
   }
@@ -211,8 +215,11 @@ export async function downloadReport(req: AuthRequest, res: Response) {
 }
 
 export async function deleteReport(req: AuthRequest, res: Response) {
-  const { id } = req.params;
-  const report = await prisma.report.findUnique({ where: { id } });
+  const parsedId = parseId(req.params.id);
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid report id.' });
+  }
+  const report = await prisma.report.findUnique({ where: { id: parsedId } });
   if (!report) {
     return res.status(404).json({ message: 'Report not found.' });
   }
@@ -223,6 +230,6 @@ export async function deleteReport(req: AuthRequest, res: Response) {
       // Ignore missing files
     }
   }
-  await prisma.report.delete({ where: { id } });
+  await prisma.report.delete({ where: { id: parsedId } });
   return res.status(200).json({ message: 'Report deleted.' });
 }

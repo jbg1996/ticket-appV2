@@ -10,23 +10,24 @@ type Ticket = {
   id: number;
   title: string;
   description: string;
-  status: { id: string; name: string };
-  priority: { id: string; name: string };
+  status: { id: number; name: string };
+  priority: { id: number; name: string };
   ticketType: { name: string };
   assignedTo?: { firstName: string; lastName: string } | null;
-  attachments: { id: string; originalName: string }[];
-  history: { id: string; eventType: string; message?: string; createdAt: string; actor: { firstName: string; lastName: string } }[];
-  infoRequests: { id: string; message: string; status: string; requesterTech: { firstName: string; lastName: string }; responses: { id: string; message: string; responder: { firstName: string; lastName: string } }[] }[];
+  attachments: { id: number; originalName: string }[];
+  history: { id: number; eventType: string; message?: string; createdAt: string; actor: { firstName: string; lastName: string } }[];
+  infoRequests: { id: number; message: string; status: string; requesterTech: { firstName: string; lastName: string }; responses: { id: number; message: string; responder: { firstName: string; lastName: string } }[] }[];
 };
 
-type Status = { id: string; name: string };
+type Status = { id: number; name: string };
 
-type Priority = { id: string; name: string };
+type Priority = { id: number; name: string };
 
-type User = { id: string; firstName: string; lastName: string; isActive: boolean; userType: { name: string } };
+type User = { id: number; firstName: string; lastName: string; isActive: boolean; userType: { name: string } };
 
 export function TicketDetailPage() {
   const { id } = useParams();
+  const ticketId = id ? Number(id) : null;
   const { user } = useAuth();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,9 +40,9 @@ export function TicketDetailPage() {
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [assignees, setAssignees] = useState<User[]>([]);
-  const [selectedStatusId, setSelectedStatusId] = useState('');
+  const [selectedStatusId, setSelectedStatusId] = useState<number | null>(null);
   const [editDescription, setEditDescription] = useState('');
-  const [editPriorityId, setEditPriorityId] = useState('');
+  const [editPriorityId, setEditPriorityId] = useState<number | null>(null);
   const [adminError, setAdminError] = useState('');
   const [attachmentError, setAttachmentError] = useState('');
   const [assigneeQuery, setAssigneeQuery] = useState('');
@@ -51,7 +52,7 @@ export function TicketDetailPage() {
   const canDeleteAttachment = user?.role === 'ADMIN' || user?.role === 'TECH';
 
   const loadTicket = async () => {
-    if (!id) {
+    if (!ticketId || !Number.isInteger(ticketId)) {
       setTicket(null);
       setError('Ticket not found.');
       setLoading(false);
@@ -60,7 +61,7 @@ export function TicketDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<Ticket>(`/api/tickets/${id}`);
+      const data = await apiFetch<Ticket>(`/api/tickets/${ticketId}`);
       setTicket(data);
       setEditDescription(data.description);
       setEditPriorityId(data.priority.id);
@@ -76,7 +77,7 @@ export function TicketDetailPage() {
   useEffect(() => {
     let cancelled = false;
     const fetchTicket = async () => {
-      if (!id) {
+      if (!ticketId || !Number.isInteger(ticketId)) {
         if (!cancelled) {
           setTicket(null);
           setError('Ticket not found.');
@@ -87,7 +88,7 @@ export function TicketDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiFetch<Ticket>(`/api/tickets/${id}`);
+        const data = await apiFetch<Ticket>(`/api/tickets/${ticketId}`);
         if (cancelled) return;
         setTicket(data);
         setEditDescription(data.description);
@@ -109,7 +110,7 @@ export function TicketDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [ticketId]);
 
   useEffect(() => {
     apiFetch<Status[]>('/api/catalog/statuses').then(setStatuses);
@@ -130,8 +131,8 @@ export function TicketDetailPage() {
   }, [assigneeQuery, assignees]);
 
   const handleRequestInfo = async () => {
-    if (!id) return;
-    await apiFetch(`/api/tickets/${id}/request-info`, {
+    if (!ticketId) return;
+    await apiFetch(`/api/tickets/${ticketId}/request-info`, {
       method: 'POST',
       body: JSON.stringify({
         message: infoMessage,
@@ -146,7 +147,7 @@ export function TicketDetailPage() {
     loadTicket();
   };
 
-  const handleRespondInfo = async (infoRequestId: string) => {
+  const handleRespondInfo = async (infoRequestId: number) => {
     const formData = new FormData();
     formData.append('message', responseMessage);
     if (responseFile) {
@@ -159,14 +160,14 @@ export function TicketDetailPage() {
   };
 
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!id || !event.target.files?.[0]) return;
+    if (!ticketId || !event.target.files?.[0]) return;
     const formData = new FormData();
     formData.append('file', event.target.files[0]);
-    await apiUpload(`/api/tickets/${id}/attachments`, formData);
+    await apiUpload(`/api/tickets/${ticketId}/attachments`, formData);
     loadTicket();
   };
 
-  const handleDownload = async (attachmentId: string, originalName: string) => {
+  const handleDownload = async (attachmentId: number, originalName: string) => {
     const blob = await apiFetchBlob(`/api/attachments/${attachmentId}/download`);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -176,12 +177,12 @@ export function TicketDetailPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleDeleteAttachment = async (attachmentId: string, originalName: string) => {
-    if (!id) return;
+  const handleDeleteAttachment = async (attachmentId: number, originalName: string) => {
+    if (!ticketId) return;
     setAttachmentError('');
     if (!window.confirm(`Delete attachment "${originalName}"? This action cannot be undone.`)) return;
     try {
-      await apiFetch(`/api/tickets/${id}/attachments/${attachmentId}`, { method: 'DELETE' });
+      await apiFetch(`/api/tickets/${ticketId}/attachments/${attachmentId}`, { method: 'DELETE' });
       setTicket((current) =>
         current ? { ...current, attachments: current.attachments.filter((attachment) => attachment.id !== attachmentId) } : current
       );
@@ -191,8 +192,8 @@ export function TicketDetailPage() {
   };
 
   const handleComment = async () => {
-    if (!id) return;
-    await apiFetch(`/api/tickets/${id}/comment`, {
+    if (!ticketId) return;
+    await apiFetch(`/api/tickets/${ticketId}/comment`, {
       method: 'POST',
       body: JSON.stringify({ message: comment })
     });
@@ -200,20 +201,20 @@ export function TicketDetailPage() {
     loadTicket();
   };
 
-  const handleStatusSelect = async (statusId: string) => {
+  const handleStatusSelect = async (statusId: number) => {
     setSelectedStatusId(statusId);
-    if (!id || !statusId) return;
-    await apiFetch(`/api/tickets/${id}/status`, {
+    if (!ticketId || !statusId) return;
+    await apiFetch(`/api/tickets/${ticketId}/status`, {
       method: 'POST',
       body: JSON.stringify({ statusId })
     });
-    setSelectedStatusId('');
+    setSelectedStatusId(null);
     loadTicket();
   };
 
-  const handleAssignSelect = async (assigneeId: string) => {
-    if (!id || !assigneeId) return;
-    await apiFetch(`/api/tickets/${id}/assign`, {
+  const handleAssignSelect = async (assigneeId: number) => {
+    if (!ticketId || !assigneeId) return;
+    await apiFetch(`/api/tickets/${ticketId}/assign`, {
       method: 'POST',
       body: JSON.stringify({ assigneeId })
     });
@@ -223,14 +224,14 @@ export function TicketDetailPage() {
   };
 
   const handleAdminUpdate = async () => {
-    if (!id) return;
+    if (!ticketId) return;
     setAdminError('');
     try {
-      await apiFetch(`/api/tickets/${id}`, {
+      await apiFetch(`/api/tickets/${ticketId}`, {
         method: 'PUT',
         body: JSON.stringify({
           description: editDescription,
-          priorityId: editPriorityId
+          priorityId: editPriorityId ?? undefined
         })
       });
       loadTicket();
@@ -240,11 +241,11 @@ export function TicketDetailPage() {
   };
 
   const handleAdminDelete = async () => {
-    if (!id) return;
+    if (!ticketId) return;
     setAdminError('');
     if (!window.confirm('Are you sure you want to delete this ticket?')) return;
     try {
-      await apiFetch(`/api/tickets/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/tickets/${ticketId}`, { method: 'DELETE' });
       window.location.href = '/tickets';
     } catch (error) {
       setAdminError(error instanceof Error ? error.message : 'No autorizado');
@@ -371,8 +372,8 @@ export function TicketDetailPage() {
                   <div className="ticket-detail__state-control">
                     <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
                     <select
-                      value={selectedStatusId || ticket.status.id}
-                      onChange={(event) => handleStatusSelect(event.target.value)}
+                      value={selectedStatusId ?? ticket.status.id}
+                      onChange={(event) => handleStatusSelect(Number(event.target.value))}
                     >
                       {statuses.map((status) => (
                         <option key={status.id} value={status.id}>
@@ -442,7 +443,10 @@ export function TicketDetailPage() {
                 </label>
                 <label>
                   Priority
-                  <select value={editPriorityId} onChange={(event) => setEditPriorityId(event.target.value)}>
+                  <select
+                    value={editPriorityId ?? ''}
+                    onChange={(event) => setEditPriorityId(event.target.value ? Number(event.target.value) : null)}
+                  >
                     {priorities.map((priority) => (
                       <option key={priority.id} value={priority.id}>
                         {priority.name}

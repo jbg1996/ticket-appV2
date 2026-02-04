@@ -78,16 +78,16 @@ const loginSchema = z.object({
   password: z.string().min(6)
 });
 const ticketCreateSchema = z.object({
-  ticketTypeId: z.string(),
+  ticketTypeId: z.coerce.number(),
   description: z.string().min(1),
-  priorityId: z.string().optional(),
+  priorityId: z.coerce.number().optional(),
   title2: z.string().optional()
 });
 const assignSchema = z.object({
-  assigneeId: z.string()
+  assigneeId: z.coerce.number()
 });
 const statusSchema = z.object({
-  statusId: z.string()
+  statusId: z.coerce.number()
 });
 const infoRequestSchema = z.object({
   message: z.string().min(1),
