@@ -23,9 +23,8 @@ async function main() {
   await prisma.priority.deleteMany();
   await prisma.userType.deleteMany();
 
-  const createdUserTypes = await Promise.all(
-    userTypes.map((type) => prisma.userType.create({ data: type }))
-  );
+  await prisma.userType.createMany({ data: userTypes });
+  const createdUserTypes = await prisma.userType.findMany();
 
   await prisma.priority.createMany({
     data: [
