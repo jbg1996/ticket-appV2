@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import path from 'path';
+import fs from 'fs/promises';
 import prisma from '../prisma/client.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { addHistory } from '../services/historyService.js';
@@ -59,4 +60,44 @@ export async function downloadAttachment(req: AuthRequest, res: Response) {
     return res.status(400).json({ message: 'Invalid attachment path.' });
   }
   res.download(absolutePath, attachment.originalName);
+}
+
+export async function deleteAttachment(req: AuthRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+  if (req.user.role !== 'ADMIN' && req.user.role !== 'TECH') {
+    return res.status(403).json({ message: 'Forbidden.' });
+  }
+  const parsedTicketId = parseTicketId(req.params.ticketId);
+  if (!parsedTicketId) {
+    return res.status(400).json({ message: 'Invalid ticket id.' });
+  }
+  const { attachmentId } = req.params;
+  const attachment = await prisma.attachment.findUnique({ where: { id: attachmentId } });
+  if (!attachment || attachment.ticketId !== parsedTicketId) {
+    return res.status(404).json({ message: 'Attachment not found.' });
+  }
+  const absolutePath = path.resolve(attachment.storagePath);
+  if (!absolutePath.includes(path.resolve(env.uploadDir))) {
+    return res.status(400).json({ message: 'Invalid attachment path.' });
+  }
+
+  await prisma.attachment.delete({ where: { id: attachmentId } });
+  await addHistory({
+    ticketId: parsedTicketId,
+    actorId: req.user.id,
+    eventType: 'ATTACHMENT_DELETED',
+    message: attachment.originalName
+  });
+
+  try {
+    await fs.unlink(absolutePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  return res.status(200).json({ ok: true });
 }
