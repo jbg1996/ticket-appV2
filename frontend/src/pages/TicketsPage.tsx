@@ -13,11 +13,11 @@ type Ticket = {
   title: string;
   createdAt: string;
   updatedAt: string;
-  status: { id: string; name: string };
-  priority: { id: string; name: string };
-  ticketType: { id: string; name: string; description: string; defaultPriorityId: string };
-  createdBy?: { id: string; firstName: string; lastName: string } | null;
-  assignedTo?: { id: string; firstName: string; lastName: string } | null;
+  status: { id: number; name: string };
+  priority: { id: number; name: string };
+  ticketType: { id: number; name: string; description: string; defaultPriorityId: number };
+  createdBy?: { id: number; firstName: string; lastName: string } | null;
+  assignedTo?: { id: number; firstName: string; lastName: string } | null;
 };
 
 type SortState = { columnId: string; direction: 'asc' | 'desc' };

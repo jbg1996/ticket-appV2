@@ -4,13 +4,13 @@ import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 
 type TicketType = {
-  id: string;
+  id: number;
   name: string;
   description: string;
-  defaultPriorityId: string;
+  defaultPriorityId: number;
 };
 
-type Priority = { id: string; name: string };
+type Priority = { id: number; name: string };
 
 type TicketResponse = { id: number };
 
@@ -19,10 +19,10 @@ export function CreateTicketPage() {
   const navigate = useNavigate();
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
-  const [selectedType, setSelectedType] = useState('');
+  const [selectedType, setSelectedType] = useState<number | ''>('');
   const [description, setDescription] = useState('');
   const [title2, setTitle2] = useState('');
-  const [priorityId, setPriorityId] = useState('');
+  const [priorityId, setPriorityId] = useState<number | ''>('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,9 +52,9 @@ export function CreateTicketPage() {
       const response = await apiFetch<TicketResponse>('/api/tickets', {
         method: 'POST',
         body: JSON.stringify({
-          ticketTypeId: selectedType,
+          ticketTypeId: Number(selectedType),
           description,
-          priorityId,
+          priorityId: priorityId ? Number(priorityId) : undefined,
           title2
         })
       });
@@ -78,7 +78,10 @@ export function CreateTicketPage() {
         <div className="grid">
           <label>
             Ticket Type
-            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+            <select
+              value={selectedType.toString()}
+              onChange={(event) => setSelectedType(event.target.value ? Number(event.target.value) : '')}
+            >
               <option value="">Select</option>
               {ticketTypes.map((type) => (
                 <option key={type.id} value={type.id}>
@@ -104,8 +107,8 @@ export function CreateTicketPage() {
           <label>
             Priority
             <select
-              value={priorityId}
-              onChange={(event) => setPriorityId(event.target.value)}
+              value={priorityId.toString()}
+              onChange={(event) => setPriorityId(event.target.value ? Number(event.target.value) : '')}
               disabled={user?.role === 'REQUESTER'}
             >
               {priorities.map((priority) => (

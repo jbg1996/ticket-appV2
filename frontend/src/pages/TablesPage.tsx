@@ -13,21 +13,29 @@ import {
   updateStatus,
   updateTicketType
 } from '../services/api';
-type TicketType = { id: string; name: string; description: string; defaultPriorityId: string; defaultPriority?: { name: string } };
-type Priority = { id: string; name: string; color: string };
-type Status = { id: string; name: string; sortOrder: number };
+type TicketType = { id: number; name: string; description: string; defaultPriorityId: number; defaultPriority?: { name: string } };
+type Priority = { id: number; name: string; color: string };
+type Status = { id: number; name: string; sortOrder: number };
 
 export function TablesPage() {
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [priorities, setPriorities] = useState<Priority[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
-  const [newTicketType, setNewTicketType] = useState({ name: '', description: '', defaultPriorityId: '' });
+  const [newTicketType, setNewTicketType] = useState<{ name: string; description: string; defaultPriorityId: number | '' }>({
+    name: '',
+    description: '',
+    defaultPriorityId: ''
+  });
   const [newPriority, setNewPriority] = useState({ name: '', color: '#2563eb' });
   const [newStatus, setNewStatus] = useState({ name: '', sortOrder: 1 });
-  const [editingTicketTypeId, setEditingTicketTypeId] = useState<string | null>(null);
-  const [editingPriorityId, setEditingPriorityId] = useState<string | null>(null);
-  const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
-  const [editTicketType, setEditTicketType] = useState({ name: '', description: '', defaultPriorityId: '' });
+  const [editingTicketTypeId, setEditingTicketTypeId] = useState<number | null>(null);
+  const [editingPriorityId, setEditingPriorityId] = useState<number | null>(null);
+  const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
+  const [editTicketType, setEditTicketType] = useState<{ name: string; description: string; defaultPriorityId: number | '' }>({
+    name: '',
+    description: '',
+    defaultPriorityId: ''
+  });
   const [editPriority, setEditPriority] = useState({ name: '', color: '' });
   const [editStatus, setEditStatus] = useState({ name: '', sortOrder: 1 });
   const [loading, setLoading] = useState(false);
@@ -47,7 +55,13 @@ export function TablesPage() {
     setLoading(true);
     setErrorMessage('');
     try {
-      await createTicketType(newTicketType);
+      if (!newTicketType.defaultPriorityId) {
+        throw new Error('Select a default priority.');
+      }
+      await createTicketType({
+        ...newTicketType,
+        defaultPriorityId: Number(newTicketType.defaultPriorityId)
+      });
       setNewTicketType({ name: '', description: '', defaultPriorityId: '' });
       loadCatalogs();
     } catch (error) {
@@ -105,7 +119,10 @@ export function TablesPage() {
     setLoading(true);
     setErrorMessage('');
     try {
-      await updateTicketType(editingTicketTypeId, editTicketType);
+      await updateTicketType(editingTicketTypeId, {
+        ...editTicketType,
+        defaultPriorityId: editTicketType.defaultPriorityId ? Number(editTicketType.defaultPriorityId) : undefined
+      });
       setEditingTicketTypeId(null);
       loadCatalogs();
     } catch (error) {
@@ -145,7 +162,7 @@ export function TablesPage() {
     }
   };
 
-  const handleDeleteTicketType = async (id: string) => {
+  const handleDeleteTicketType = async (id: number) => {
     setLoading(true);
     setErrorMessage('');
     try {
@@ -158,7 +175,7 @@ export function TablesPage() {
     }
   };
 
-  const handleDeletePriority = async (id: string) => {
+  const handleDeletePriority = async (id: number) => {
     setLoading(true);
     setErrorMessage('');
     try {
@@ -171,7 +188,7 @@ export function TablesPage() {
     }
   };
 
-  const handleDeleteStatus = async (id: string) => {
+  const handleDeleteStatus = async (id: number) => {
     setLoading(true);
     setErrorMessage('');
     try {
@@ -203,8 +220,13 @@ export function TablesPage() {
               onChange={(event) => setNewTicketType({ ...newTicketType, description: event.target.value })}
             />
             <select
-              value={newTicketType.defaultPriorityId}
-              onChange={(event) => setNewTicketType({ ...newTicketType, defaultPriorityId: event.target.value })}
+              value={newTicketType.defaultPriorityId.toString()}
+              onChange={(event) =>
+                setNewTicketType({
+                  ...newTicketType,
+                  defaultPriorityId: event.target.value ? Number(event.target.value) : ''
+                })
+              }
             >
               <option value="">Default Priority</option>
               {priorities.map((priority) => (
@@ -243,8 +265,13 @@ export function TablesPage() {
                 onChange={(event) => setEditTicketType({ ...editTicketType, description: event.target.value })}
               />
               <select
-                value={editTicketType.defaultPriorityId}
-                onChange={(event) => setEditTicketType({ ...editTicketType, defaultPriorityId: event.target.value })}
+                value={editTicketType.defaultPriorityId.toString()}
+                onChange={(event) =>
+                  setEditTicketType({
+                    ...editTicketType,
+                    defaultPriorityId: event.target.value ? Number(event.target.value) : ''
+                  })
+                }
               >
                 <option value="">Default Priority</option>
                 {priorities.map((priority) => (
