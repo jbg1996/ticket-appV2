@@ -5,10 +5,10 @@ import prisma from '../src/prisma/client.js';
 import app from '../src/index.js';
 
 let token = '';
-let ticketTypeId = '';
-let statusId = '';
-let priorityId = '';
-let userId = '';
+let ticketTypeId = 0;
+let statusId = 0;
+let priorityId = 0;
+let userId = 0;
 
 beforeAll(async () => {
   const adminType = await prisma.userType.create({ data: { name: 'Administrador', code: 'ADMIN' } });

@@ -3,7 +3,7 @@ import { apiFetch, apiFetchBlob } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 
 type Report = {
-  id: string;
+  id: number;
   fileName: string;
   createdAt: string;
   rangeStart: string;
