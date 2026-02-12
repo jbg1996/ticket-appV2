@@ -5,20 +5,13 @@ import prisma from '../prisma/client.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { addHistory } from '../services/historyService.js';
 import { env } from '../config/env.js';
-
-function parseTicketId(id: string): number | null {
-  const parsed = Number(id);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}
+import { parseId } from '../utils/parseId.js';
 
 export async function uploadAttachment(req: AuthRequest, res: Response) {
   if (!req.user || !req.file) {
     return res.status(400).json({ message: 'Missing attachment.' });
   }
-  const parsedId = parseTicketId(req.params.id);
+  const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
@@ -45,8 +38,11 @@ export async function downloadAttachment(req: AuthRequest, res: Response) {
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const { id } = req.params;
-  const attachment = await prisma.attachment.findUnique({ where: { id }, include: { ticket: true } });
+  const parsedId = parseId(req.params.id);
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid attachment id.' });
+  }
+  const attachment = await prisma.attachment.findUnique({ where: { id: parsedId }, include: { ticket: true } });
   if (!attachment) {
     return res.status(404).json({ message: 'Attachment not found.' });
   }
@@ -69,12 +65,15 @@ export async function deleteAttachment(req: AuthRequest, res: Response) {
   if (req.user.role !== 'ADMIN' && req.user.role !== 'TECH') {
     return res.status(403).json({ message: 'Forbidden.' });
   }
-  const parsedTicketId = parseTicketId(req.params.ticketId);
+  const parsedTicketId = parseId(req.params.ticketId);
   if (!parsedTicketId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const { attachmentId } = req.params;
-  const attachment = await prisma.attachment.findUnique({ where: { id: attachmentId } });
+  const parsedAttachmentId = parseId(req.params.attachmentId);
+  if (!parsedAttachmentId) {
+    return res.status(400).json({ message: 'Invalid attachment id.' });
+  }
+  const attachment = await prisma.attachment.findUnique({ where: { id: parsedAttachmentId } });
   if (!attachment || attachment.ticketId !== parsedTicketId) {
     return res.status(404).json({ message: 'Attachment not found.' });
   }
@@ -83,7 +82,7 @@ export async function deleteAttachment(req: AuthRequest, res: Response) {
     return res.status(400).json({ message: 'Invalid attachment path.' });
   }
 
-  await prisma.attachment.delete({ where: { id: attachmentId } });
+  await prisma.attachment.delete({ where: { id: parsedAttachmentId } });
   await addHistory({
     ticketId: parsedTicketId,
     actorId: req.user.id,

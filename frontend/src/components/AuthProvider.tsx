@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { apiFetch } from '../services/api';
 
 export type User = {
-  id: string;
+  id: number;
   email: string;
   role: 'ADMIN' | 'TECH' | 'REQUESTER';
   firstName: string;

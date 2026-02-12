@@ -2,23 +2,53 @@ import { useEffect, useState } from 'react';
 import { createUser, deleteUser, getUsers, getUserTypes, updateUser } from '../services/api';
 
 type User = {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
   phone?: string | null;
   isActive: boolean;
-  userType: { id: string; name: string; code: string };
+  userType: { id: number; name: string; code: string };
 };
 
-type UserType = { id: string; name: string };
+type UserType = { id: number; name: string };
+
+type NewUserForm = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone: string;
+  userTypeId: number | '';
+};
+
+type EditUserForm = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  userTypeId: number | '';
+  isActive: boolean;
+};
 
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
-  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', phone: '', userTypeId: '' });
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [editUser, setEditUser] = useState({ firstName: '', lastName: '', phone: '', userTypeId: '', isActive: true });
+  const [newUser, setNewUser] = useState<NewUserForm>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phone: '',
+    userTypeId: ''
+  });
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editUser, setEditUser] = useState<EditUserForm>({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    userTypeId: '',
+    isActive: true
+  });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -49,7 +79,10 @@ export function UsersPage() {
     setLoading(true);
     setErrorMessage('');
     try {
-      await createUser({ ...newUser, phone: newUser.phone || undefined });
+      if (!newUser.userTypeId) {
+        throw new Error('Select a role for the user.');
+      }
+      await createUser({ ...newUser, phone: newUser.phone || undefined, userTypeId: Number(newUser.userTypeId) });
       setNewUser({ firstName: '', lastName: '', email: '', password: '', phone: '', userTypeId: '' });
       loadUsers();
     } catch (error) {
@@ -84,7 +117,7 @@ export function UsersPage() {
         firstName: editUser.firstName,
         lastName: editUser.lastName,
         phone: editUser.phone || undefined,
-        userTypeId: editUser.userTypeId || undefined,
+        userTypeId: editUser.userTypeId ? Number(editUser.userTypeId) : undefined,
         isActive: editUser.isActive
       });
       handleEditCancel();
@@ -96,7 +129,7 @@ export function UsersPage() {
     }
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDelete = async (userId: number) => {
     setLoading(true);
     setErrorMessage('');
     try {
@@ -138,7 +171,10 @@ export function UsersPage() {
             value={newUser.password}
             onChange={(event) => setNewUser({ ...newUser, password: event.target.value })}
           />
-          <select value={newUser.userTypeId} onChange={(event) => setNewUser({ ...newUser, userTypeId: event.target.value })}>
+          <select
+            value={newUser.userTypeId.toString()}
+            onChange={(event) => setNewUser({ ...newUser, userTypeId: event.target.value ? Number(event.target.value) : '' })}
+          >
             <option value="">Select role</option>
             {userTypes.map((type) => (
               <option key={type.id} value={type.id}>
@@ -201,7 +237,10 @@ export function UsersPage() {
               value={editUser.phone}
               onChange={(event) => setEditUser({ ...editUser, phone: event.target.value })}
             />
-            <select value={editUser.userTypeId} onChange={(event) => setEditUser({ ...editUser, userTypeId: event.target.value })}>
+            <select
+              value={editUser.userTypeId.toString()}
+              onChange={(event) => setEditUser({ ...editUser, userTypeId: event.target.value ? Number(event.target.value) : '' })}
+            >
               <option value="">Select role</option>
               {userTypes.map((type) => (
                 <option key={type.id} value={type.id}>

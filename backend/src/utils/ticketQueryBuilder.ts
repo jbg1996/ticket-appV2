@@ -73,12 +73,11 @@ export function parseTicketQuery(value: unknown): TicketQueryInput {
     }
     sort = { column, direction };
   }
-  let filters: TicketQueryInput['filters'];
+  const filters: Record<string, ColumnFilterInput | undefined> = {};
   if (value.filters !== undefined) {
     if (!isPlainObject(value.filters)) {
       throw new Error('Invalid filters.');
     }
-    filters = {};
     Object.entries(value.filters).forEach(([key, filterValue]) => {
       if (!filterValue) {
         return;
@@ -109,7 +108,7 @@ export function parseTicketQuery(value: unknown): TicketQueryInput {
       }
     });
   }
-  return { q, sort, filters };
+  return { q, sort, filters: Object.keys(filters).length > 0 ? filters : undefined };
 }
 
 function startOfDay(value: Date) {
@@ -300,7 +299,7 @@ function buildFilters(filters: Record<string, ColumnFilterInput | undefined>): P
         if (filter.op === 'Contains data') {
           conditions.push({});
         } else if (filter.op === 'Does not contain data') {
-          conditions.push({ createdBy: { id: { equals: '__missing__' } } });
+          conditions.push({ createdBy: { id: { equals: -1 } } });
         } else {
           conditions.push({ createdBy: buildNameFilter(filter) });
         }
