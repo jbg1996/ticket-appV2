@@ -9,14 +9,27 @@ async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
 }
 
-type GenerateReportParams = {
-  label: string;
-  where: Prisma.TicketWhereInput;
-  orderBy?: Prisma.TicketOrderByWithRelationInput | Prisma.TicketOrderByWithRelationInput[];
-  rangeStart?: Date;
-  rangeEnd?: Date;
-  fileName?: string;
-};
+type ReportPreset = 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+type GenerateReportParams =
+  | {
+      label: string;
+      where: Prisma.TicketWhereInput;
+      orderBy?: Prisma.TicketOrderByWithRelationInput | Prisma.TicketOrderByWithRelationInput[];
+      rangeStart?: Date;
+      rangeEnd?: Date;
+      fileName?: string;
+      preset?: ReportPreset;
+    }
+  | {
+      preset: ReportPreset;
+      rangeStart: Date;
+      rangeEnd: Date;
+      orderBy?: Prisma.TicketOrderByWithRelationInput | Prisma.TicketOrderByWithRelationInput[];
+      fileName?: string;
+      label?: string;
+      where?: Prisma.TicketWhereInput;
+    };
 
 type GeneratedReport = {
   fileName: string;
@@ -27,17 +40,31 @@ type GeneratedReport = {
   rangeEnd: Date;
 };
 
-export async function generateReport({
-  label,
-  where,
-  orderBy,
-  rangeStart,
-  rangeEnd,
-  fileName
-}: GenerateReportParams): Promise<GeneratedReport> {
+export async function generateReport(params: GenerateReportParams): Promise<GeneratedReport> {
+  let label = 'label' in params ? params.label : params.label;
+  let where = 'where' in params ? params.where : params.where;
+  const orderBy = params.orderBy;
+  const rangeStart = params.rangeStart;
+  const rangeEnd = params.rangeEnd;
+  const fileName = params.fileName;
+  if (!label || !where) {
+    if ('preset' in params && params.preset) {
+      label = params.preset.toLowerCase();
+      where = {
+        createdAt: {
+          gte: params.rangeStart,
+          lte: params.rangeEnd
+        }
+      };
+    }
+  }
   const now = new Date();
   const workbook = new ExcelJS.Workbook();
   const detailSheet = workbook.addWorksheet('Details');
+
+  if (!label || !where) {
+    throw new Error('Missing report parameters.');
+  }
 
   const tickets = await prisma.ticket.findMany({
     where,

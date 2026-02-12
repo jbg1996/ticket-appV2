@@ -1,28 +1,38 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, apiFetchBlob } from '../services/api';
 
-type User = { id: string; firstName: string; lastName: string; email: string; isActive: boolean; userType: { name: string } };
+type User = { id: number; firstName: string; lastName: string; email: string; isActive: boolean; userType: { name: string } };
 
-type Report = { id: string; name: string; createdAt: string };
+type Report = { id: number; name: string; createdAt: string };
 
 type Setting = { value: string };
 
-type CatalogItem = { id: string; name: string };
+type CatalogItem = { id: number; name: string };
 
-type UserType = { id: string; name: string };
+type UserType = { id: number; name: string };
 
 export function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [headerColor, setHeaderColor] = useState('#1f2937');
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
-  const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', userTypeId: '' });
+  const [newUser, setNewUser] = useState<{ firstName: string; lastName: string; email: string; password: string; userTypeId: number | '' }>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    userTypeId: ''
+  });
   const [ticketTypes, setTicketTypes] = useState<CatalogItem[]>([]);
   const [priorities, setPriorities] = useState<CatalogItem[]>([]);
   const [statuses, setStatuses] = useState<CatalogItem[]>([]);
   const [newStatus, setNewStatus] = useState({ name: '', sortOrder: 1 });
   const [newPriority, setNewPriority] = useState({ name: '', color: '#2563eb' });
-  const [newTicketType, setNewTicketType] = useState({ name: '', description: '', defaultPriorityId: '' });
+  const [newTicketType, setNewTicketType] = useState<{ name: string; description: string; defaultPriorityId: number | '' }>({
+    name: '',
+    description: '',
+    defaultPriorityId: ''
+  });
 
   const loadAll = () => {
     apiFetch<User[]>('/api/users').then(setUsers);
@@ -39,7 +49,8 @@ export function AdminPage() {
   }, []);
 
   const createUser = async () => {
-    await apiFetch('/api/users', { method: 'POST', body: JSON.stringify(newUser) });
+    if (!newUser.userTypeId) return;
+    await apiFetch('/api/users', { method: 'POST', body: JSON.stringify({ ...newUser, userTypeId: Number(newUser.userTypeId) }) });
     setNewUser({ firstName: '', lastName: '', email: '', password: '', userTypeId: '' });
     loadAll();
   };
@@ -66,7 +77,11 @@ export function AdminPage() {
   };
 
   const createTicketType = async () => {
-    await apiFetch('/api/catalog/ticket-types', { method: 'POST', body: JSON.stringify(newTicketType) });
+    if (!newTicketType.defaultPriorityId) return;
+    await apiFetch('/api/catalog/ticket-types', {
+      method: 'POST',
+      body: JSON.stringify({ ...newTicketType, defaultPriorityId: Number(newTicketType.defaultPriorityId) })
+    });
     setNewTicketType({ name: '', description: '', defaultPriorityId: '' });
     loadAll();
   };
@@ -106,7 +121,10 @@ export function AdminPage() {
               <input placeholder="Last name" value={newUser.lastName} onChange={(event) => setNewUser({ ...newUser, lastName: event.target.value })} />
               <input placeholder="Email" value={newUser.email} onChange={(event) => setNewUser({ ...newUser, email: event.target.value })} />
               <input placeholder="Password" type="password" value={newUser.password} onChange={(event) => setNewUser({ ...newUser, password: event.target.value })} />
-              <select value={newUser.userTypeId} onChange={(event) => setNewUser({ ...newUser, userTypeId: event.target.value })}>
+              <select
+                value={newUser.userTypeId.toString()}
+                onChange={(event) => setNewUser({ ...newUser, userTypeId: event.target.value ? Number(event.target.value) : '' })}
+              >
                 <option value="">Select role</option>
                 {userTypes.map((type) => (
                   <option key={type.id} value={type.id}>
@@ -147,8 +165,13 @@ export function AdminPage() {
                 onChange={(event) => setNewTicketType({ ...newTicketType, description: event.target.value })}
               />
               <select
-                value={newTicketType.defaultPriorityId}
-                onChange={(event) => setNewTicketType({ ...newTicketType, defaultPriorityId: event.target.value })}
+                value={newTicketType.defaultPriorityId.toString()}
+                onChange={(event) =>
+                  setNewTicketType({
+                    ...newTicketType,
+                    defaultPriorityId: event.target.value ? Number(event.target.value) : ''
+                  })
+                }
               >
                 <option value="">Default Priority</option>
                 {priorities.map((item) => (

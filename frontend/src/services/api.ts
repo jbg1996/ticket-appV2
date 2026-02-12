@@ -65,45 +65,45 @@ export type CreateUserPayload = {
   email: string;
   password: string;
   phone?: string;
-  userTypeId: string;
+  userTypeId: number;
 };
 
 export type UpdateUserPayload = {
   firstName?: string;
   lastName?: string;
   phone?: string;
-  userTypeId?: string;
+  userTypeId?: number;
   isActive?: boolean;
 };
 
-export type TicketTypePayload = { name: string; description: string; defaultPriorityId: string };
+export type TicketTypePayload = { name: string; description: string; defaultPriorityId: number };
 export type PriorityPayload = { name: string; color: string };
 export type StatusPayload = { name: string; sortOrder: number };
 
 export const getUsers = () => apiFetch('/api/users');
 export const getUserTypes = () => apiFetch('/api/catalog/user-types');
 export const createUser = (payload: CreateUserPayload) => apiFetch('/api/users', { method: 'POST', body: JSON.stringify(payload) });
-export const updateUser = (id: string, payload: UpdateUserPayload) =>
+export const updateUser = (id: number, payload: UpdateUserPayload) =>
   apiFetch(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-export const deleteUser = (id: string) => apiFetch(`/api/users/${id}`, { method: 'DELETE' });
+export const deleteUser = (id: number) => apiFetch(`/api/users/${id}`, { method: 'DELETE' });
 
 export const getTicketTypes = () => apiFetch('/api/catalog/ticket-types');
 export const createTicketType = (payload: TicketTypePayload) =>
   apiFetch('/api/catalog/ticket-types', { method: 'POST', body: JSON.stringify(payload) });
-export const updateTicketType = (id: string, payload: Partial<TicketTypePayload>) =>
+export const updateTicketType = (id: number, payload: Partial<TicketTypePayload>) =>
   apiFetch(`/api/catalog/ticket-types/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-export const deleteTicketType = (id: string) => apiFetch(`/api/catalog/ticket-types/${id}`, { method: 'DELETE' });
+export const deleteTicketType = (id: number) => apiFetch(`/api/catalog/ticket-types/${id}`, { method: 'DELETE' });
 
 export const getPriorities = () => apiFetch('/api/catalog/priorities');
 export const createPriority = (payload: PriorityPayload) =>
   apiFetch('/api/catalog/priorities', { method: 'POST', body: JSON.stringify(payload) });
-export const updatePriority = (id: string, payload: Partial<PriorityPayload>) =>
+export const updatePriority = (id: number, payload: Partial<PriorityPayload>) =>
   apiFetch(`/api/catalog/priorities/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-export const deletePriority = (id: string) => apiFetch(`/api/catalog/priorities/${id}`, { method: 'DELETE' });
+export const deletePriority = (id: number) => apiFetch(`/api/catalog/priorities/${id}`, { method: 'DELETE' });
 
 export const getStatuses = () => apiFetch('/api/catalog/statuses');
 export const createStatus = (payload: StatusPayload) =>
   apiFetch('/api/catalog/statuses', { method: 'POST', body: JSON.stringify(payload) });
-export const updateStatus = (id: string, payload: Partial<StatusPayload>) =>
+export const updateStatus = (id: number, payload: Partial<StatusPayload>) =>
   apiFetch(`/api/catalog/statuses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
-export const deleteStatus = (id: string) => apiFetch(`/api/catalog/statuses/${id}`, { method: 'DELETE' });
+export const deleteStatus = (id: number) => apiFetch(`/api/catalog/statuses/${id}`, { method: 'DELETE' });
