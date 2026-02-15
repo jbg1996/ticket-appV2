@@ -10,7 +10,7 @@ type Ticket = {
   id: number;
   title: string;
   description: string;
-  status: { id: number; name: string };
+  status: { id: number; name: string; color?: string | null };
   priority: { id: number; name: string };
   ticketType: { name: string };
   assignedTo?: { firstName: string; lastName: string } | null;
@@ -19,7 +19,7 @@ type Ticket = {
   infoRequests: { id: number; message: string; status: string; requesterTech: { firstName: string; lastName: string }; responses: { id: number; message: string; responder: { firstName: string; lastName: string } }[] }[];
 };
 
-type Status = { id: number; name: string };
+type Status = { id: number; name: string; color?: string | null };
 
 type Priority = { id: number; name: string };
 
@@ -293,13 +293,8 @@ export function TicketDetailPage() {
     ? `${ticket.assignedTo.firstName.charAt(0)}${ticket.assignedTo.lastName.charAt(0)}`.toUpperCase()
     : 'UN';
 
-  const statusTone = (() => {
-    const normalized = ticket.status.name.toLowerCase();
-    if (normalized.includes('open') || normalized.includes('new')) return 'ticket-detail__state-dot--open';
-    if (normalized.includes('progress')) return 'ticket-detail__state-dot--progress';
-    if (normalized.includes('resolved') || normalized.includes('closed')) return 'ticket-detail__state-dot--closed';
-    return 'ticket-detail__state-dot--default';
-  })();
+  const activeStatus = statuses.find((status) => status.id === (selectedStatusId ?? ticket.status.id)) ?? ticket.status;
+  const statusColor = activeStatus.color ?? '#9CA3AF';
 
   return (
     <div className="page ticket-detail">
@@ -366,11 +361,11 @@ export function TicketDetailPage() {
               <span className="ticket-detail__meta-value">{ticket.priority.name}</span>
             </div>
             <div className="ticket-detail__meta-item">
-              <span className="ticket-detail__meta-label">State</span>
+              <span className="ticket-detail__meta-label">Status</span>
               {(user?.role === 'ADMIN' || user?.role === 'TECH') ? (
                 <label className="ticket-detail__state-select">
                   <div className="ticket-detail__state-control">
-                    <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
+                    <span className="ticket-detail__state-dot" style={{ backgroundColor: statusColor }} aria-hidden="true" />
                     <select
                       value={selectedStatusId ?? ticket.status.id}
                       onChange={(event) => handleStatusSelect(Number(event.target.value))}
@@ -386,7 +381,7 @@ export function TicketDetailPage() {
               ) : (
                 <div className="ticket-detail__state-readonly">
                   <div className="ticket-detail__state-control">
-                    <span className={`ticket-detail__state-dot ${statusTone}`} aria-hidden="true" />
+                    <span className="ticket-detail__state-dot" style={{ backgroundColor: statusColor }} aria-hidden="true" />
                     <span>{ticket.status.name}</span>
                   </div>
                 </div>
