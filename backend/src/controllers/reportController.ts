@@ -73,7 +73,6 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
         rangeStart: now,
         rangeEnd: now,
         createdById: req.user.id,
-        status: 'PENDING'
       }
     });
     console.info(`Report generation started`, { reportId: pendingReport.id, source: 'tickets' });
@@ -88,7 +87,6 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
       const report = await prisma.report.update({
         where: { id: pendingReport.id },
         data: {
-          status: 'READY',
           fileName: reportResult.fileName,
           filePath: reportResult.filePath,
           mimeType: reportResult.mimeType,
@@ -104,7 +102,6 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
       await prisma.report.update({
         where: { id: pendingReport.id },
         data: {
-          status: 'FAILED',
           errorMessage
         }
       });
@@ -127,7 +124,6 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
       rangeStart: range.rangeStart,
       rangeEnd: range.rangeEnd,
       createdById: req.user.id,
-      status: 'PENDING'
     }
   });
   console.info(`Report generation started`, { reportId: pendingReport.id });
@@ -148,7 +144,6 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
     const report = await prisma.report.update({
       where: { id: pendingReport.id },
       data: {
-        status: 'READY',
         fileName: reportResult.fileName,
         filePath: reportResult.filePath,
         mimeType: reportResult.mimeType,
@@ -162,7 +157,6 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
     await prisma.report.update({
       where: { id: pendingReport.id },
       data: {
-        status: 'FAILED',
         errorMessage
       }
     });
@@ -194,11 +188,12 @@ export async function downloadReport(req: AuthRequest, res: Response) {
   if (!report) {
     return res.status(404).json({ message: 'Report not found.' });
   }
-  console.info(`Report download requested`, { reportId: parsedId, status: report.status });
-  if (report.status === 'PENDING') {
+  const reportStatus = report.errorMessage ? 'FAILED' : report.filePath ? 'READY' : 'PENDING';
+  console.info(`Report download requested`, { reportId: parsedId, status: reportStatus });
+  if (reportStatus === 'PENDING') {
     return res.status(409).json({ message: 'Report is being generated', status: 'PENDING' });
   }
-  if (report.status === 'FAILED') {
+  if (reportStatus === 'FAILED') {
     return res.status(500).json({ message: 'Report generation failed', error: report.errorMessage });
   }
   if (!report.filePath || !report.fileName || !report.mimeType) {
