@@ -15,7 +15,7 @@ import {
 } from '../services/api';
 type TicketType = { id: number; name: string; description: string; defaultPriorityId: number; defaultPriority?: { name: string } };
 type Priority = { id: number; name: string; color: string };
-type Status = { id: number; name: string; sortOrder: number };
+type Status = { id: number; name: string; sortOrder: number; color?: string | null };
 
 export function TablesPage() {
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
@@ -27,7 +27,7 @@ export function TablesPage() {
     defaultPriorityId: ''
   });
   const [newPriority, setNewPriority] = useState({ name: '', color: '#2563eb' });
-  const [newStatus, setNewStatus] = useState({ name: '', sortOrder: 1 });
+  const [newStatus, setNewStatus] = useState({ name: '', sortOrder: 1, color: '#9CA3AF' });
   const [editingTicketTypeId, setEditingTicketTypeId] = useState<number | null>(null);
   const [editingPriorityId, setEditingPriorityId] = useState<number | null>(null);
   const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
@@ -37,7 +37,7 @@ export function TablesPage() {
     defaultPriorityId: ''
   });
   const [editPriority, setEditPriority] = useState({ name: '', color: '' });
-  const [editStatus, setEditStatus] = useState({ name: '', sortOrder: 1 });
+  const [editStatus, setEditStatus] = useState({ name: '', sortOrder: 1, color: '#9CA3AF' });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -90,7 +90,7 @@ export function TablesPage() {
     setErrorMessage('');
     try {
       await createStatus(newStatus);
-      setNewStatus({ name: '', sortOrder: 1 });
+      setNewStatus({ name: '', sortOrder: 1, color: '#9CA3AF' });
       loadCatalogs();
     } catch (error) {
       setErrorMessage((error as Error).message);
@@ -111,7 +111,7 @@ export function TablesPage() {
 
   const handleEditStatus = (item: Status) => {
     setEditingStatusId(item.id);
-    setEditStatus({ name: item.name, sortOrder: item.sortOrder });
+    setEditStatus({ name: item.name, sortOrder: item.sortOrder, color: item.color ?? '#9CA3AF' });
   };
 
   const handleSaveTicketType = async () => {
@@ -349,6 +349,11 @@ export function TablesPage() {
               value={newStatus.sortOrder}
               onChange={(event) => setNewStatus({ ...newStatus, sortOrder: Number(event.target.value) })}
             />
+            <input
+              placeholder="Color (HEX)"
+              value={newStatus.color}
+              onChange={(event) => setNewStatus({ ...newStatus, color: event.target.value })}
+            />
             <button onClick={handleCreateStatus} disabled={loading}>Create</button>
           </div>
           <ul className="list">
@@ -357,6 +362,7 @@ export function TablesPage() {
                 <div>
                   <div>{item.name}</div>
                   <div className="list__meta">Order: {item.sortOrder}</div>
+                  <div className="list__meta">Color: {item.color ?? '#9CA3AF'}</div>
                 </div>
                 <div className="action-row">
                   <button onClick={() => handleEditStatus(item)} disabled={loading}>Edit</button>
@@ -377,6 +383,11 @@ export function TablesPage() {
                 type="number"
                 value={editStatus.sortOrder}
                 onChange={(event) => setEditStatus({ ...editStatus, sortOrder: Number(event.target.value) })}
+              />
+              <input
+                placeholder="Color (HEX)"
+                value={editStatus.color}
+                onChange={(event) => setEditStatus({ ...editStatus, color: event.target.value })}
               />
               <div className="action-row">
                 <button onClick={handleSaveStatus} disabled={loading}>Save</button>
