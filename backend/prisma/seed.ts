@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 
 async function main() {
   const userTypes = [
-    { name: 'Administrador', code: 'ADMIN' },
-    { name: 'Técnico', code: 'TECH' },
-    { name: 'Solicitante', code: 'REQUESTER' }
+    { name: 'Admin', code: 'ADMIN' },
+    { name: 'Technical', code: 'TECH' },
+    { name: 'Requester', code: 'REQUESTER' }
   ];
 
   await prisma.attachment.deleteMany();
@@ -65,19 +65,19 @@ async function main() {
       },
       {
         name: 'ACCESO',
-        description: 'Indica el sistema y el nivel de acceso requerido.',
+        description: 'Indica el sistema y el nivel de acceso requerid:.',
         defaultPriorityId: getPriorityId('Media'),
         isActive: true
       },
       {
         name: 'HARDWARE',
-        description: 'Describe el equipo y la falla reportada.',
+        description: 'Describe el equipo y la falla reportada:',
         defaultPriorityId: getPriorityId('Alta'),
         isActive: true
       },
       {
         name: 'SOFTWARE',
-        description: 'Indica la aplicación y los detalles del problema.',
+        description: 'Indica la aplicación y los detalles del problema:',
         defaultPriorityId: getPriorityId('Media'),
         isActive: true
       },
