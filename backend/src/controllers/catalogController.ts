@@ -13,7 +13,7 @@ export async function listStatuses(_req: Request, res: Response) {
 }
 
 export async function createStatus(req: Request, res: Response) {
-  const { name, sortOrder } = req.body as { name?: string; sortOrder?: number };
+  const { name, sortOrder, color } = req.body as { name?: string; sortOrder?: number; color?: string };
   if (!name || typeof name !== 'string' || Number.isNaN(Number(sortOrder))) {
     console.warn('createStatus validation failed', { name, sortOrder });
     return res.status(400).json({ message: 'Name and sortOrder are required.' });
@@ -22,7 +22,9 @@ export async function createStatus(req: Request, res: Response) {
   if (existing) {
     return res.status(400).json({ message: 'Status name already exists.' });
   }
-  const status = await prisma.status.create({ data: { name: name.trim(), sortOrder: Number(sortOrder) } });
+  const status = await prisma.status.create({
+    data: { name: name.trim(), sortOrder: Number(sortOrder), color: color?.trim() || undefined }
+  });
   console.info('Created status', { id: status.id });
   res.status(201).json(status);
 }
@@ -32,9 +34,9 @@ export async function updateStatus(req: Request, res: Response) {
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid status id.' });
   }
-  const { name, sortOrder } = req.body as { name?: string; sortOrder?: number };
-  if (!name && typeof sortOrder === 'undefined') {
-    return res.status(400).json({ message: 'Provide name or sortOrder to update.' });
+  const { name, sortOrder, color } = req.body as { name?: string; sortOrder?: number; color?: string };
+  if (!name && typeof sortOrder === 'undefined' && typeof color === 'undefined') {
+    return res.status(400).json({ message: 'Provide name, sortOrder, or color to update.' });
   }
   const existing = await prisma.status.findUnique({ where: { id: parsedId } });
   if (!existing) {
@@ -48,7 +50,11 @@ export async function updateStatus(req: Request, res: Response) {
   }
   const status = await prisma.status.update({
     where: { id: parsedId },
-    data: { name: name?.trim(), sortOrder: typeof sortOrder === 'undefined' ? undefined : Number(sortOrder) }
+    data: {
+      name: name?.trim(),
+      sortOrder: typeof sortOrder === 'undefined' ? undefined : Number(sortOrder),
+      color: typeof color === 'undefined' ? undefined : color.trim()
+    }
   });
   console.info('Updated status', { id: parsedId });
   res.json(status);
