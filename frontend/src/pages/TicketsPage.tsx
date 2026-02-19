@@ -13,7 +13,7 @@ type Ticket = {
   title: string;
   createdAt: string;
   updatedAt: string;
-  status: { id: number; name: string };
+  status: { id: number; name: string; color?: string | null };
   priority: { id: number; name: string };
   ticketType: { id: number; name: string; description: string; defaultPriorityId: number };
   createdBy?: { id: number; firstName: string; lastName: string } | null;
