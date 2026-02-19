@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../services/api';
 import { useLayout } from '../components/AppLayout';
-
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-
-function isValidHexColor(color: string) {
-  return hexColorPattern.test(color.trim());
-}
+import { isValidHexColor } from '../utils/color';
 
 export function AppSettingsPage() {
   const {
@@ -41,6 +36,12 @@ export function AppSettingsPage() {
     () => (isValidHexColor(draftSidebarColor) ? '' : 'Use a valid hex color (#RGB or #RRGGBB).'),
     [draftSidebarColor]
   );
+
+  useEffect(() => {
+    if (isValidHexColor(draftSidebarColor)) {
+      setSidebarColor(draftSidebarColor);
+    }
+  }, [draftSidebarColor, setSidebarColor]);
 
   const handleSave = async () => {
     if (headerColorError || sidebarColorError) {

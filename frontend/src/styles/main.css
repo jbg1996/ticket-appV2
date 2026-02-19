@@ -118,6 +118,8 @@ nav a {
   --app-header-bg: #1f2937;
   --app-sidebar-bg: #0f172a;
   --app-sidebar-fg: #e2e8f0;
+  --app-sidebar-active-bg: #334155;
+  --app-sidebar-active-fg: #f8fafc;
   height: 100vh;
   width: 100vw;
   display: flex;
@@ -389,8 +391,8 @@ nav a {
 }
 
 .sidebar__link.is-active {
-  background: rgba(59, 130, 246, 0.25);
-  color: #ffffff;
+  background: var(--app-sidebar-active-bg);
+  color: var(--app-sidebar-active-fg);
 }
 
 .sidebar__icon {
