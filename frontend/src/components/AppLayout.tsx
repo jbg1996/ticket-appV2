@@ -2,6 +2,7 @@ import { createContext, CSSProperties, useContext, useEffect, useMemo, useState 
 import { Outlet } from 'react-router-dom';
 import { SideBar } from './SideBar';
 import { TopBar } from './TopBar';
+import { getSidebarTheme } from '../utils/color';
 
 const HEADER_COLOR_STORAGE_KEY = 'headerColor';
 const SIDEBAR_COLOR_STORAGE_KEY = 'sidebarColor';
@@ -26,17 +27,6 @@ const LayoutContext = createContext<LayoutContextValue | undefined>(undefined);
 function getStoredValue(key: string) {
   const stored = localStorage.getItem(key);
   return stored ? stored : null;
-}
-
-function getReadableTextColor(backgroundColor: string) {
-  const hex = backgroundColor.replace('#', '');
-  const expandedHex = hex.length === 3 ? hex.split('').map((char) => `${char}${char}`).join('') : hex;
-  const value = Number.parseInt(expandedHex, 16);
-  const red = (value >> 16) & 255;
-  const green = (value >> 8) & 255;
-  const blue = value & 255;
-  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
-  return brightness > 160 ? '#0f172a' : '#f8fafc';
 }
 
 export function AppLayout({
@@ -108,10 +98,12 @@ export function AppLayout({
     [appLogoUrl, companyLogoUrl, headerColor, sidebarColor]
   );
 
-  const sidebarTextColor = getReadableTextColor(sidebarColor);
+  const sidebarTheme = getSidebarTheme(sidebarColor);
   const shellStyle = {
-    '--app-sidebar-bg': sidebarColor,
-    '--app-sidebar-fg': sidebarTextColor,
+    '--app-sidebar-bg': sidebarTheme.sidebarBgColor,
+    '--app-sidebar-fg': sidebarTheme.sidebarTextColor,
+    '--app-sidebar-active-bg': sidebarTheme.activeBgColor,
+    '--app-sidebar-active-fg': sidebarTheme.activeTextColor,
     '--app-header-bg': headerColor
   } as CSSProperties;
 
