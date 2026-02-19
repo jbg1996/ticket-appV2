@@ -115,6 +115,9 @@ nav a {
 }
 
 .app-shell {
+  --app-header-bg: #1f2937;
+  --app-sidebar-bg: #0f172a;
+  --app-sidebar-fg: #e2e8f0;
   height: 100vh;
   width: 100vw;
   display: flex;
@@ -138,6 +141,7 @@ nav a {
 
 .topbar {
   height: 64px;
+  background: var(--app-header-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -310,8 +314,8 @@ nav a {
 
 .sidebar {
   width: 240px;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--app-sidebar-bg);
+  color: var(--app-sidebar-fg);
   display: flex;
   flex-direction: column;
   padding: 16px 12px;
@@ -404,6 +408,12 @@ nav a {
   opacity: 0;
   width: 0;
   overflow: hidden;
+}
+
+
+.text-error {
+  color: #dc2626;
+  font-size: 12px;
 }
 
 .page {

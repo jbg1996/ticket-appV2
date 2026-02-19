@@ -71,6 +71,7 @@ POST /api/reports/generate?period=daily|weekly|monthly
 - Reports are stored in `/backend/reports`.
 
 ## Notes / Assumptions
+- App Settings (Admin → App) lets you configure header and sidebar colors, persisted in SQLite via Prisma.
 - JWT is stored in `localStorage` and sent as `Authorization: Bearer <token>`.
 - Ticket title auto-fills from ticket type. If ticket type is `OTROS`, the UI shows a custom title field that becomes the stored title.
 - Delete safeguard: only Admin can delete, and only if status is `Nuevo` and within 24 hours of creation.
