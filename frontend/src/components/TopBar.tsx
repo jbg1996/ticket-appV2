@@ -101,7 +101,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="topbar" style={{ background: headerColor }}>
+    <header className="topbar" style={{ background: headerColor || "var(--app-header-bg)" }}>
       <div className="topbar__left">
         {appLogoUrl ? (
           <img src={appLogoUrl} alt="App logo" className="topbar__logo" />

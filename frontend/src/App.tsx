@@ -19,15 +19,20 @@ import { AppSettingsPage } from './pages/AppSettingsPage';
 import { apiFetch } from './services/api';
 import './styles/main.css';
 
+type AppSettings = {
+  headerColor: string;
+  sidebarColor: string;
+};
+
 function AppShell() {
   const { user } = useAuth();
-  const [headerColor, setHeaderColor] = useState('#1f2937');
+  const [appSettings, setAppSettings] = useState<AppSettings>({ headerColor: '#1f2937', sidebarColor: '#0f172a' });
 
   useEffect(() => {
     if (!user) return;
-    apiFetch<{ value: string }>('/api/settings/header-color', { cache: 'no-store' })
-      .then((data) => setHeaderColor(data.value))
-      .catch(() => setHeaderColor('#1f2937'));
+    apiFetch<AppSettings>('/api/settings/header-color', { cache: 'no-store' })
+      .then((data) => setAppSettings(data))
+      .catch(() => setAppSettings({ headerColor: '#1f2937', sidebarColor: '#0f172a' }));
   }, [user]);
 
   return (
@@ -37,7 +42,7 @@ function AppShell() {
         <Route
           element={
             <ProtectedRoute>
-              <AppLayout initialHeaderColor={headerColor} />
+              <AppLayout initialHeaderColor={appSettings.headerColor} initialSidebarColor={appSettings.sidebarColor} />
             </ProtectedRoute>
           }
         >
