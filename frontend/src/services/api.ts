@@ -78,7 +78,7 @@ export type UpdateUserPayload = {
 
 export type TicketTypePayload = { name: string; description: string; defaultPriorityId: number };
 export type PriorityPayload = { name: string; color: string };
-export type StatusPayload = { name: string; sortOrder: number };
+export type StatusPayload = { name: string; sortOrder: number; color?: string };
 
 export const getUsers = () => apiFetch('/api/users');
 export const getUserTypes = () => apiFetch('/api/catalog/user-types');

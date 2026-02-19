@@ -59,6 +59,7 @@ model Status {
   id        Int      @id @default(autoincrement())
   name      String
   sortOrder Int
+  color     String   @default("#9CA3AF")
   tickets   Ticket[]
 }
 
