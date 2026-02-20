@@ -227,11 +227,13 @@ async function main() {
     const createdAt = randomDateWithinLastDays(DAYS_WINDOW);
     const resolvedAt = isResolved ? buildResolvedDate(createdAt) : null;
 
+    const ticketNumber = index + 1;
+
     const ticket = await prisma.ticket.create({
       data: {
         code: null,
-        title: index === 0 ? 'EJEMPLO' : `EJEMPLO ${index + 1}`,
-        description: `Ticket de ejemplo ${index + 1} para poblar métricas del dashboard.`,
+        title: `TEST ${ticketNumber}`,
+        description: `Ticket de prueba ${ticketNumber} para poblar métricas del dashboard.`,
         ticketTypeId: randomItem(ticketTypeRecords).id,
         priorityId: randomItem(priorityRecords).id,
         statusId: isResolved ? randomItem(closedStatusPool).id : randomItem(openStatusPool).id,

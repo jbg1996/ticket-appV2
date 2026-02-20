@@ -4,6 +4,7 @@ import { apiFetch } from '../services/api';
 
 type Ticket = {
   id: number;
+  code?: string | null;
   title: string;
   updatedAt: string;
   createdAt: string;
@@ -15,6 +16,8 @@ type Ticket = {
 export function RecentTicketsPage() {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<Ticket[]>([]);
+
+  const formatTicketDisplayName = (ticket: Ticket) => (ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title);
 
   useEffect(() => {
     apiFetch<Ticket[]>('/api/tickets/recent?hours=48')
@@ -38,7 +41,7 @@ export function RecentTicketsPage() {
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
               >
                 <div>
-                  <strong>{ticket.title}</strong>
+                  <strong>{formatTicketDisplayName(ticket)}</strong>
                   <div className="list__meta">Status: {ticket.status.name} • Priority: {ticket.priority.name}</div>
                   <div className="list__meta">
                     Updated {new Date(ticket.updatedAt).toLocaleString()} • Created {new Date(ticket.createdAt).toLocaleString()}
