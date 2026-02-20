@@ -22,14 +22,25 @@ import { useDashboardData, type DashboardGranularity } from '../hooks/useDashboa
 
 const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
 
-const formatShortDate = (bucket: string, granularity: DashboardGranularity) => {
-  if (granularity === 'week') {
-    return bucket;
-  }
+const parseUtcDate = (bucket: string) => {
   const date = new Date(`${bucket}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) {
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatShortDate = (bucket: string, granularity: DashboardGranularity) => {
+  const date = parseUtcDate(bucket);
+  if (!date) {
     return bucket;
   }
+
+  if (granularity === 'week') {
+    return new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'UTC',
+      day: '2-digit',
+      month: 'short'
+    }).format(date);
+  }
+
   return new Intl.DateTimeFormat('es-ES', {
     timeZone: 'UTC',
     day: '2-digit',
@@ -38,13 +49,28 @@ const formatShortDate = (bucket: string, granularity: DashboardGranularity) => {
 };
 
 const formatFullDate = (bucket: string, granularity: DashboardGranularity) => {
-  if (granularity === 'week') {
-    return `Semana ${bucket}`;
-  }
-  const date = new Date(`${bucket}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) {
+  const date = parseUtcDate(bucket);
+  if (!date) {
     return bucket;
   }
+
+  if (granularity === 'week') {
+    const weekEndDate = new Date(date.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const startLabel = new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'UTC',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).format(date);
+    const endLabel = new Intl.DateTimeFormat('es-ES', {
+      timeZone: 'UTC',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).format(weekEndDate);
+    return `Semana (${startLabel} - ${endLabel})`;
+  }
+
   return new Intl.DateTimeFormat('es-ES', {
     timeZone: 'UTC',
     year: 'numeric',

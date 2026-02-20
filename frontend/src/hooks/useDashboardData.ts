@@ -25,19 +25,31 @@ type DashboardApiResponse = {
 const toIsoStart = (value: string) => new Date(`${value}T00:00:00.000Z`).toISOString();
 const toIsoEnd = (value: string) => new Date(`${value}T23:59:59.999Z`).toISOString();
 
+const toFiniteNumber = (value: unknown) => {
+  const numericValue = Number(value ?? 0);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
+
 const normalizeSummary = (summary: DashboardSummary): DashboardSummary => ({
   ...summary,
   kpis: {
-    totalCreated: Number(summary.kpis?.totalCreated ?? 0),
-    totalResolved: Number(summary.kpis?.totalResolved ?? 0),
-    openBacklog: Number(summary.kpis?.openBacklog ?? 0),
-    mttrHours: Number(summary.kpis?.mttrHours ?? 0)
+    totalCreated: toFiniteNumber(summary.kpis?.totalCreated),
+    totalResolved: toFiniteNumber(summary.kpis?.totalResolved),
+    openBacklog: toFiniteNumber(summary.kpis?.openBacklog),
+    mttrHours: toFiniteNumber(summary.kpis?.mttrHours)
   },
-  createdVsResolvedSeries: summary.createdVsResolvedSeries ?? [],
+  createdVsResolvedSeries: (summary.createdVsResolvedSeries ?? []).map((point) => ({
+    date: String(point.date ?? ''),
+    createdCount: toFiniteNumber(point.createdCount),
+    resolvedCount: toFiniteNumber(point.resolvedCount)
+  })),
   statusDistribution: summary.statusDistribution ?? [],
   backlogAging: summary.backlogAging ?? [],
   workloadByTech: summary.workloadByTech ?? [],
-  mttrSeries: summary.mttrSeries ?? []
+  mttrSeries: (summary.mttrSeries ?? []).map((point) => ({
+    date: String(point.date ?? ''),
+    mttrHours: toFiniteNumber(point.mttrHours)
+  }))
 });
 
 const emptySummary: DashboardSummary = {
