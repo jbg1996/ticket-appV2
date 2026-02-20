@@ -1,11 +1,15 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, CSSProperties, useContext, useEffect, useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SideBar } from './SideBar';
 import { TopBar } from './TopBar';
+import { getSidebarTheme } from '../utils/color';
 
 const HEADER_COLOR_STORAGE_KEY = 'headerColor';
+const SIDEBAR_COLOR_STORAGE_KEY = 'sidebarColor';
 const APP_LOGO_STORAGE_KEY = 'appLogoUrl';
 const COMPANY_LOGO_STORAGE_KEY = 'companyLogoUrl';
+const DEFAULT_HEADER_COLOR = '#1f2937';
+const DEFAULT_SIDEBAR_COLOR = '#0f172a';
 
 export type LayoutContextValue = {
   appLogoUrl: string | null;
@@ -14,6 +18,8 @@ export type LayoutContextValue = {
   setCompanyLogoUrl: (value: string | null) => void;
   headerColor: string;
   setHeaderColor: (value: string) => void;
+  sidebarColor: string;
+  setSidebarColor: (value: string) => void;
 };
 
 const LayoutContext = createContext<LayoutContextValue | undefined>(undefined);
@@ -23,10 +29,19 @@ function getStoredValue(key: string) {
   return stored ? stored : null;
 }
 
-export function AppLayout({ initialHeaderColor }: { initialHeaderColor?: string }) {
+export function AppLayout({
+  initialHeaderColor,
+  initialSidebarColor
+}: {
+  initialHeaderColor?: string;
+  initialSidebarColor?: string;
+}) {
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(() => getStoredValue(APP_LOGO_STORAGE_KEY));
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(() => getStoredValue(COMPANY_LOGO_STORAGE_KEY));
-  const [headerColor, setHeaderColor] = useState(() => getStoredValue(HEADER_COLOR_STORAGE_KEY) ?? initialHeaderColor ?? '#1f2937');
+  const [headerColor, setHeaderColor] = useState(() => getStoredValue(HEADER_COLOR_STORAGE_KEY) ?? initialHeaderColor ?? DEFAULT_HEADER_COLOR);
+  const [sidebarColor, setSidebarColor] = useState(
+    () => getStoredValue(SIDEBAR_COLOR_STORAGE_KEY) ?? initialSidebarColor ?? initialHeaderColor ?? DEFAULT_SIDEBAR_COLOR
+  );
 
   useEffect(() => {
     if (initialHeaderColor && !getStoredValue(HEADER_COLOR_STORAGE_KEY)) {
@@ -35,8 +50,23 @@ export function AppLayout({ initialHeaderColor }: { initialHeaderColor?: string 
   }, [initialHeaderColor]);
 
   useEffect(() => {
+    if (initialSidebarColor && !getStoredValue(SIDEBAR_COLOR_STORAGE_KEY)) {
+      setSidebarColor(initialSidebarColor);
+      return;
+    }
+
+    if (!initialSidebarColor && initialHeaderColor && !getStoredValue(SIDEBAR_COLOR_STORAGE_KEY)) {
+      setSidebarColor(initialHeaderColor);
+    }
+  }, [initialHeaderColor, initialSidebarColor]);
+
+  useEffect(() => {
     localStorage.setItem(HEADER_COLOR_STORAGE_KEY, headerColor);
   }, [headerColor]);
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLOR_STORAGE_KEY, sidebarColor);
+  }, [sidebarColor]);
 
   useEffect(() => {
     if (appLogoUrl) {
@@ -61,14 +91,25 @@ export function AppLayout({ initialHeaderColor }: { initialHeaderColor?: string 
       companyLogoUrl,
       setCompanyLogoUrl,
       headerColor,
-      setHeaderColor
+      setHeaderColor,
+      sidebarColor,
+      setSidebarColor
     }),
-    [appLogoUrl, companyLogoUrl, headerColor]
+    [appLogoUrl, companyLogoUrl, headerColor, sidebarColor]
   );
+
+  const sidebarTheme = getSidebarTheme(sidebarColor);
+  const shellStyle = {
+    '--app-sidebar-bg': sidebarTheme.sidebarBgColor,
+    '--app-sidebar-fg': sidebarTheme.sidebarTextColor,
+    '--app-sidebar-active-bg': sidebarTheme.activeBgColor,
+    '--app-sidebar-active-fg': sidebarTheme.activeTextColor,
+    '--app-header-bg': headerColor
+  } as CSSProperties;
 
   return (
     <LayoutContext.Provider value={value}>
-      <div className="app-shell">
+      <div className="app-shell" style={shellStyle}>
         <TopBar />
         <div className="app-shell__body">
           <SideBar />

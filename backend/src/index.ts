@@ -45,7 +45,7 @@ import {
 } from './controllers/ticketController.js';
 import { uploadAttachment, downloadAttachment, deleteAttachment } from './controllers/attachmentController.js';
 import { generateReportHandler, listReports, downloadReport, deleteReport } from './controllers/reportController.js';
-import { getHeaderColor, updateHeaderColor } from './controllers/settingsController.js';
+import { getAppSettings, updateAppSettings } from './controllers/settingsController.js';
 import { generateReport } from './services/reportService.js';
 
 const app = express();
@@ -191,8 +191,8 @@ app.get('/api/reports', requireAuth, requireAdminRole, listReports);
 app.delete('/api/reports/:id', requireAuth, requireAdminRole, deleteReport);
 app.get('/api/reports/:id/download', noStore, requireAuth, requireAdminRole, downloadReport);
 
-app.get('/api/settings/header-color', noStore, requireAuth, getHeaderColor);
-app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateHeaderColor);
+app.get('/api/settings/header-color', noStore, requireAuth, getAppSettings);
+app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateAppSettings);
 
 app.use(errorHandler);
 
