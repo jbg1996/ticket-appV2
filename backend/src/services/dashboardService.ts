@@ -36,7 +36,9 @@ const toNumber = (value: number | bigint | null | undefined) => {
 
 const getBucketExpression = (columnName: 'createdAt' | 'resolvedAt', granularity: DashboardGranularity) => {
   if (granularity === 'week') {
-    return Prisma.sql`strftime('%Y-W%W', ${Prisma.raw(`"Ticket"."${columnName}"`)})`;
+    // SQLite has no native ISO week bucket. We group by the Monday date for the week,
+    // and expose that normalized day string as the API `date` field.
+    return Prisma.sql`date(${Prisma.raw(`"Ticket"."${columnName}"`)}, '-' || ((cast(strftime('%w', ${Prisma.raw(`"Ticket"."${columnName}"`)}) as integer) + 6) % 7) || ' days')`;
   }
   return Prisma.sql`date(${Prisma.raw(`"Ticket"."${columnName}"`)})`;
 };
@@ -48,7 +50,10 @@ const normalizeBucket = (value: string | null | undefined) => {
     return null;
   }
   const bucket = value.trim();
-  return bucket.length > 0 ? bucket : null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(bucket)) {
+    return null;
+  }
+  return bucket;
 };
 
 const toUtcMidnight = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
@@ -59,15 +64,7 @@ const startOfUtcWeek = (value: Date) => {
   return new Date(value.getTime() + diff * DAY_IN_MS);
 };
 
-const formatWeekBucket = (value: Date) => {
-  const yearStart = new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
-  const dayOfYear = Math.floor((value.getTime() - yearStart.getTime()) / DAY_IN_MS);
-  const mondayBasedWeekDay = (value.getUTCDay() + 6) % 7;
-  const week = String(Math.floor((dayOfYear + 7 - mondayBasedWeekDay) / 7)).padStart(2, '0');
-  return `${value.getUTCFullYear()}-W${week}`;
-};
-
-const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGranularity) => {
+export const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGranularity) => {
   const grid: string[] = [];
 
   if (granularity === 'day') {
@@ -83,7 +80,7 @@ const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGranularity
   let cursor = startOfUtcWeek(toUtcMidnight(start));
   const limit = toUtcMidnight(end);
   while (cursor.getTime() <= limit.getTime()) {
-    grid.push(formatWeekBucket(cursor));
+    grid.push(cursor.toISOString().slice(0, 10));
     cursor = new Date(cursor.getTime() + 7 * DAY_IN_MS);
   }
   return grid;
