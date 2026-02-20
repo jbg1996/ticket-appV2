@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../services/api';
 
 export type DashboardGranularity = 'day' | 'week';
@@ -25,11 +25,45 @@ type DashboardApiResponse = {
 const toIsoStart = (value: string) => new Date(`${value}T00:00:00.000Z`).toISOString();
 const toIsoEnd = (value: string) => new Date(`${value}T23:59:59.999Z`).toISOString();
 
+const normalizeSummary = (summary: DashboardSummary): DashboardSummary => ({
+  ...summary,
+  kpis: {
+    totalCreated: Number(summary.kpis?.totalCreated ?? 0),
+    totalResolved: Number(summary.kpis?.totalResolved ?? 0),
+    openBacklog: Number(summary.kpis?.openBacklog ?? 0),
+    mttrHours: Number(summary.kpis?.mttrHours ?? 0)
+  },
+  createdVsResolvedSeries: summary.createdVsResolvedSeries ?? [],
+  statusDistribution: summary.statusDistribution ?? [],
+  backlogAging: summary.backlogAging ?? [],
+  workloadByTech: summary.workloadByTech ?? [],
+  mttrSeries: summary.mttrSeries ?? []
+});
+
+const emptySummary: DashboardSummary = {
+  kpis: {
+    totalCreated: 0,
+    totalResolved: 0,
+    openBacklog: 0,
+    mttrHours: 0
+  },
+  createdVsResolvedSeries: [],
+  statusDistribution: [],
+  backlogAging: [],
+  workloadByTech: [],
+  mttrSeries: []
+};
+
 export function useDashboardData(params: { start: string; end: string; granularity: DashboardGranularity }) {
   const { start, end, granularity } = params;
-  const [data, setData] = useState<DashboardSummary | null>(null);
+  const [data, setData] = useState<DashboardSummary>(emptySummary);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const retry = useCallback(() => {
+    setReloadToken((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -46,12 +80,12 @@ export function useDashboardData(params: { start: string; end: string; granulari
           signal: controller.signal,
           cache: 'no-store'
         });
-        setData(response.data);
+        setData(normalizeSummary(response.data));
       } catch (requestError) {
         if ((requestError as Error).name === 'AbortError') {
           return;
         }
-        setData(null);
+        setData(emptySummary);
         setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el dashboard.');
       } finally {
         setLoading(false);
@@ -60,7 +94,18 @@ export function useDashboardData(params: { start: string; end: string; granulari
 
     fetchDashboard();
     return () => controller.abort();
-  }, [start, end, granularity]);
+  }, [start, end, granularity, reloadToken]);
 
-  return { data, loading, error };
+  const empty = useMemo(() => {
+    const hasMainSeriesData =
+      data.createdVsResolvedSeries.some((point) => point.createdCount > 0 || point.resolvedCount > 0) ||
+      data.statusDistribution.some((point) => point.count > 0) ||
+      data.backlogAging.some((point) => point.count > 0) ||
+      data.workloadByTech.some((point) => point.openAssignedCount > 0 || point.resolvedInRangeCount > 0) ||
+      data.mttrSeries.some((point) => point.mttrHours > 0);
+
+    return !hasMainSeriesData;
+  }, [data]);
+
+  return { data, loading, error, retry, empty };
 }
