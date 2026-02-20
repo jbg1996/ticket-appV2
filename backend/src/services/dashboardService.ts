@@ -10,12 +10,12 @@ export type DashboardFilters = {
 };
 
 type CreatedResolvedRow = {
-  bucket: string;
+  bucket: string | null;
   total: number | bigint;
 };
 
 type MttrRow = {
-  bucket: string;
+  bucket: string | null;
   mttrHours: number | null;
 };
 
@@ -24,11 +24,14 @@ type WorkloadRow = {
   _count: { _all: number };
 };
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
 const toNumber = (value: number | bigint | null | undefined) => {
   if (value === null || value === undefined) {
     return 0;
   }
-  return Number(value);
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
 };
 
 const getBucketExpression = (columnName: 'createdAt' | 'resolvedAt', granularity: DashboardGranularity) => {
@@ -38,7 +41,61 @@ const getBucketExpression = (columnName: 'createdAt' | 'resolvedAt', granularity
   return Prisma.sql`date(${Prisma.raw(`"Ticket"."${columnName}"`)})`;
 };
 
-const sortBuckets = (a: string, b: string) => a.localeCompare(b);
+const sortBuckets = (a: string | null | undefined, b: string | null | undefined) => (a ?? '').localeCompare(b ?? '');
+
+const normalizeBucket = (value: string | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+  const bucket = value.trim();
+  return bucket.length > 0 ? bucket : null;
+};
+
+const toUtcMidnight = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+
+const startOfUtcWeek = (value: Date) => {
+  const day = value.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return new Date(value.getTime() + diff * DAY_IN_MS);
+};
+
+const formatWeekBucket = (value: Date) => {
+  const yearStart = new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((value.getTime() - yearStart.getTime()) / DAY_IN_MS);
+  const mondayBasedWeekDay = (value.getUTCDay() + 6) % 7;
+  const week = String(Math.floor((dayOfYear + 7 - mondayBasedWeekDay) / 7)).padStart(2, '0');
+  return `${value.getUTCFullYear()}-W${week}`;
+};
+
+const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGranularity) => {
+  const grid: string[] = [];
+
+  if (granularity === 'day') {
+    let cursor = toUtcMidnight(start);
+    const limit = toUtcMidnight(end);
+    while (cursor.getTime() <= limit.getTime()) {
+      grid.push(cursor.toISOString().slice(0, 10));
+      cursor = new Date(cursor.getTime() + DAY_IN_MS);
+    }
+    return grid;
+  }
+
+  let cursor = startOfUtcWeek(toUtcMidnight(start));
+  const limit = toUtcMidnight(end);
+  while (cursor.getTime() <= limit.getTime()) {
+    grid.push(formatWeekBucket(cursor));
+    cursor = new Date(cursor.getTime() + 7 * DAY_IN_MS);
+  }
+  return grid;
+};
+
+const toSafeHours = (value: number | null | undefined) => {
+  const numericValue = Number(value ?? 0);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return 0;
+  }
+  return Number(numericValue.toFixed(2));
+};
 
 export async function getDashboardSummary(filters: DashboardFilters) {
   const { start, end, granularity } = filters;
@@ -64,27 +121,29 @@ export async function getDashboardSummary(filters: DashboardFilters) {
     ORDER BY bucket ASC
   `);
 
-  const createdVsResolvedMap = new Map<string, { date: string; createdCount: number; resolvedCount: number }>();
+  const timeGrid = buildTimeGrid(start, end, granularity);
+  const createdVsResolvedMap = new Map<string, { date: string; createdCount: number; resolvedCount: number }>(
+    timeGrid.map((bucket) => [bucket, { date: bucket, createdCount: 0, resolvedCount: 0 }])
+  );
 
   for (const row of createdRows) {
-    createdVsResolvedMap.set(row.bucket, {
-      date: row.bucket,
-      createdCount: toNumber(row.total),
-      resolvedCount: 0
-    });
+    const bucket = normalizeBucket(row.bucket);
+    if (!bucket) {
+      continue;
+    }
+    const existing = createdVsResolvedMap.get(bucket) ?? { date: bucket, createdCount: 0, resolvedCount: 0 };
+    existing.createdCount = toNumber(row.total);
+    createdVsResolvedMap.set(bucket, existing);
   }
 
   for (const row of resolvedRows) {
-    const existing = createdVsResolvedMap.get(row.bucket);
-    if (existing) {
-      existing.resolvedCount = toNumber(row.total);
+    const bucket = normalizeBucket(row.bucket);
+    if (!bucket) {
       continue;
     }
-    createdVsResolvedMap.set(row.bucket, {
-      date: row.bucket,
-      createdCount: 0,
-      resolvedCount: toNumber(row.total)
-    });
+    const existing = createdVsResolvedMap.get(bucket) ?? { date: bucket, createdCount: 0, resolvedCount: 0 };
+    existing.resolvedCount = toNumber(row.total);
+    createdVsResolvedMap.set(bucket, existing);
   }
 
   const createdVsResolvedSeries = Array.from(createdVsResolvedMap.values()).sort((a, b) => sortBuckets(a.date, b.date));
@@ -145,7 +204,7 @@ export async function getDashboardSummary(filters: DashboardFilters) {
 
   for (const ticket of openTickets) {
     const diffMs = now.getTime() - ticket.createdAt.getTime();
-    const daysOpen = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    const daysOpen = Math.floor(diffMs / DAY_IN_MS);
     if (daysOpen <= 2) {
       backlogAgingCounters['0-2'] += 1;
     } else if (daysOpen <= 7) {
@@ -192,7 +251,7 @@ export async function getDashboardSummary(filters: DashboardFilters) {
 
   const mergeWorkloadRows = (rows: WorkloadRow[], key: 'openAssignedCount' | 'resolvedInRangeCount') => {
     for (const row of rows) {
-      if (!row.assignedToId) {
+      if (row.assignedToId === null) {
         continue;
       }
       const existing = workloadMap.get(row.assignedToId) ?? { openAssignedCount: 0, resolvedInRangeCount: 0 };
@@ -221,7 +280,8 @@ export async function getDashboardSummary(filters: DashboardFilters) {
       openAssignedCount: workloadMap.get(userId)?.openAssignedCount ?? 0,
       resolvedInRangeCount: workloadMap.get(userId)?.resolvedInRangeCount ?? 0
     }))
-    .sort((a, b) => b.openAssignedCount - a.openAssignedCount || b.resolvedInRangeCount - a.resolvedInRangeCount);
+    .sort((a, b) => b.openAssignedCount - a.openAssignedCount || b.resolvedInRangeCount - a.resolvedInRangeCount)
+    .slice(0, 10);
 
   const resolvedTickets = await prisma.ticket.findMany({
     where: {
@@ -244,10 +304,10 @@ export async function getDashboardSummary(filters: DashboardFilters) {
       }
       return (ticket.resolvedAt.getTime() - ticket.createdAt.getTime()) / (1000 * 60 * 60);
     })
-    .filter((hours) => hours >= 0);
+    .filter((hours) => Number.isFinite(hours) && hours >= 0);
 
   const mttrHours = mttrDurationsHours.length
-    ? Number((mttrDurationsHours.reduce((acc, hours) => acc + hours, 0) / mttrDurationsHours.length).toFixed(2))
+    ? toSafeHours(mttrDurationsHours.reduce((acc, hours) => acc + hours, 0) / mttrDurationsHours.length)
     : 0;
 
   // NOTE: Same SQLite limitation as above. We need $queryRaw for bucketed averages by day/week.
@@ -260,10 +320,18 @@ export async function getDashboardSummary(filters: DashboardFilters) {
     ORDER BY bucket ASC
   `);
 
-  const mttrSeries = mttrRows.map((row) => ({
-    date: row.bucket,
-    mttrHours: Number((row.mttrHours ?? 0).toFixed(2))
-  }));
+  const mttrMap = new Map<string, number>(timeGrid.map((bucket) => [bucket, 0]));
+  for (const row of mttrRows) {
+    const bucket = normalizeBucket(row.bucket);
+    if (!bucket) {
+      continue;
+    }
+    mttrMap.set(bucket, toSafeHours(row.mttrHours));
+  }
+
+  const mttrSeries = Array.from(mttrMap.entries())
+    .sort((a, b) => sortBuckets(a[0], b[0]))
+    .map(([date, value]) => ({ date, mttrHours: value }));
 
   const totalCreated = createdRows.reduce((acc, row) => acc + toNumber(row.total), 0);
   const totalResolved = resolvedRows.reduce((acc, row) => acc + toNumber(row.total), 0);
@@ -277,9 +345,9 @@ export async function getDashboardSummary(filters: DashboardFilters) {
       mttrHours
     },
     createdVsResolvedSeries,
-    statusDistribution,
-    backlogAging,
-    workloadByTech,
+    statusDistribution: statusDistribution ?? [],
+    backlogAging: backlogAging ?? [],
+    workloadByTech: workloadByTech ?? [],
     mttrSeries
   };
 }
