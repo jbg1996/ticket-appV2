@@ -171,6 +171,8 @@ async function main() {
     const createdAt = randomDateWithinLastDays(DAYS_WINDOW);
     const resolvedAt = isResolved ? buildResolvedDate(createdAt) : null;
 
+    const ticketNumber = index + 1;
+
     const ticket = await prisma.ticket.create({
       data: {
         code: null,

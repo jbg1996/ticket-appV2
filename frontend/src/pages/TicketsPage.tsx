@@ -10,6 +10,7 @@ import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
   id: number;
+  code?: string | null;
   title: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,8 @@ type ColumnDefinition = {
 };
 
 const formatDate = (value: string) => new Date(value).toLocaleString();
+const formatTicketDisplayName = (ticket: Pick<Ticket, 'code' | 'title'>) =>
+  ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title;
 
 export function TicketsPage() {
   const { user } = useAuth();
@@ -60,7 +63,7 @@ export function TicketsPage() {
 
   const columnDefinitions: ColumnDefinition[] = useMemo(
     () => [
-      { id: 'title', label: 'Title', accessor: (ticket) => ticket.title },
+      { id: 'title', label: 'Title', accessor: (ticket) => formatTicketDisplayName(ticket) },
       { id: 'status', label: 'Status', accessor: (ticket) => ticket.status?.name },
       { id: 'priority', label: 'Priority', accessor: (ticket) => ticket.priority?.name },
       { id: 'type', label: 'Type', accessor: (ticket) => ticket.ticketType?.name },
@@ -87,7 +90,7 @@ export function TicketsPage() {
 
   const globalSearchFields = useMemo(
     () => [
-      (ticket: Ticket) => ticket.title,
+      (ticket: Ticket) => formatTicketDisplayName(ticket),
       (ticket: Ticket) => ticket.ticketType?.description ?? '',
       (ticket: Ticket) => ticket.status?.name ?? '',
       (ticket: Ticket) => ticket.priority?.name ?? '',
@@ -436,11 +439,11 @@ export function TicketsPage() {
                     type="checkbox"
                     checked={selectedIds.has(ticket.id)}
                     onChange={() => handleSelectRow(ticket.id)}
-                    aria-label={`Select ticket ${ticket.title}`}
+                    aria-label={`Select ticket ${formatTicketDisplayName(ticket)}`}
                   />
                 </td>
                 <td>
-                  <Link to={`/tickets/${ticket.id}`}>{ticket.title}</Link>
+                  <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
                 <td>{ticket.status.name}</td>
                 <td>{ticket.priority.name}</td>
