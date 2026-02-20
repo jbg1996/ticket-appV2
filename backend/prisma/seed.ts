@@ -33,7 +33,6 @@ function buildResolvedDate(createdAt: Date): Date {
 }
 
 async function main() {
-  console.log('🧹 Cleaning existing data...');
   await prisma.attachment.deleteMany();
   await prisma.infoResponse.deleteMany();
   await prisma.infoRequest.deleteMany();
@@ -70,103 +69,55 @@ async function main() {
 
   for (const userType of userTypes) {
     const existing = await prisma.userType.findFirst({ where: { code: userType.code } });
-    if (existing) {
-      await prisma.userType.update({ where: { id: existing.id }, data: userType });
-      continue;
-    }
-    await prisma.userType.create({ data: userType });
+    if (existing) await prisma.userType.update({ where: { id: existing.id }, data: userType });
+    else await prisma.userType.create({ data: userType });
   }
 
   for (const priority of priorities) {
     const existing = await prisma.priority.findFirst({ where: { name: priority.name } });
-    if (existing) {
-      await prisma.priority.update({ where: { id: existing.id }, data: priority });
-      continue;
-    }
-    await prisma.priority.create({ data: priority });
+    if (existing) await prisma.priority.update({ where: { id: existing.id }, data: priority });
+    else await prisma.priority.create({ data: priority });
   }
 
   for (const status of statuses) {
     const existing = await prisma.status.findFirst({ where: { name: status.name } });
-    if (existing) {
-      await prisma.status.update({
-        where: { id: existing.id },
-        data: { ...status, color: status.color || DEFAULT_STATUS_COLOR }
-      });
-      continue;
-    }
-    await prisma.status.create({ data: status });
+    const data = { ...status, color: status.color || DEFAULT_STATUS_COLOR };
+    if (existing) await prisma.status.update({ where: { id: existing.id }, data });
+    else await prisma.status.create({ data });
   }
 
   const userTypeRecords = await prisma.userType.findMany();
   const priorityRecords = await prisma.priority.findMany();
   const statusRecords = await prisma.status.findMany();
 
-  const findUserTypeId = (code: string) => userTypeRecords.find((record) => record.code === code)?.id;
-  const findPriorityId = (name: string) => priorityRecords.find((record) => record.name === name)?.id ?? priorityRecords[0].id;
-  const findStatusId = (name: string) => statusRecords.find((record) => record.name === name)?.id ?? statusRecords[0].id;
+  const findUserTypeId = (code: string) => userTypeRecords.find((r) => r.code === code)?.id;
+  const findPriorityId = (name: string) =>
+    priorityRecords.find((r) => r.name === name)?.id ?? priorityRecords[0].id;
 
   const ticketTypes = [
-    {
-      name: 'INCIDENCIA',
-      description: 'Describe el incidente y cómo afecta tu trabajo.',
-      defaultPriorityName: 'Alta'
-    },
-    {
-      name: 'PETICIÓN',
-      description: 'Describe la solicitud y el resultado esperado.',
-      defaultPriorityName: 'Media'
-    },
-    {
-      name: 'ACCESO',
-      description: 'Indica el sistema y el nivel de acceso requerido.',
-      defaultPriorityName: 'Media'
-    },
-    {
-      name: 'HARDWARE',
-      description: 'Describe el equipo y la falla reportada.',
-      defaultPriorityName: 'Alta'
-    },
-    {
-      name: 'SOFTWARE',
-      description: 'Indica la aplicación y los detalles del problema.',
-      defaultPriorityName: 'Media'
-    },
-    {
-      name: 'OTROS',
-      description: 'Proporciona detalles adicionales para la solicitud.',
-      defaultPriorityName: 'Baja'
-    }
+    { name: 'INCIDENCIA', description: 'Describe el incidente y cómo afecta tu trabajo.', defaultPriorityName: 'Alta' },
+    { name: 'PETICIÓN', description: 'Describe la solicitud y el resultado esperado.', defaultPriorityName: 'Media' },
+    { name: 'ACCESO', description: 'Indica el sistema y el nivel de acceso requerido.', defaultPriorityName: 'Media' },
+    { name: 'HARDWARE', description: 'Describe el equipo y la falla reportada.', defaultPriorityName: 'Alta' },
+    { name: 'SOFTWARE', description: 'Indica la aplicación y los detalles del problema.', defaultPriorityName: 'Media' },
+    { name: 'OTROS', description: 'Proporciona detalles adicionales para la solicitud.', defaultPriorityName: 'Baja' }
   ];
 
-  for (const ticketType of ticketTypes) {
+  for (const t of ticketTypes) {
     const data = {
-      description: ticketType.description,
-      defaultPriorityId: findPriorityId(ticketType.defaultPriorityName),
+      description: t.description,
+      defaultPriorityId: findPriorityId(t.defaultPriorityName),
       isActive: true
     };
-
-    const existing = await prisma.ticketType.findFirst({ where: { name: ticketType.name } });
-    if (existing) {
-      await prisma.ticketType.update({ where: { id: existing.id }, data });
-      continue;
-    }
-
-    await prisma.ticketType.create({
-      data: {
-        name: ticketType.name,
-        ...data
-      }
-    });
+    const existing = await prisma.ticketType.findFirst({ where: { name: t.name } });
+    if (existing) await prisma.ticketType.update({ where: { id: existing.id }, data });
+    else await prisma.ticketType.create({ data: { name: t.name, ...data } });
   }
 
   const adminTypeId = findUserTypeId('ADMIN');
   const techTypeId = findUserTypeId('TECH');
   const requesterTypeId = findUserTypeId('REQUESTER');
-
-  if (!adminTypeId || !techTypeId || !requesterTypeId) {
-    throw new Error('No se pudieron crear los user types base.');
-  }
+  if (!adminTypeId || !techTypeId || !requesterTypeId) throw new Error('User types base no creados.');
 
   const passwordHash = await bcrypt.hash('Admin123!', 10);
 
@@ -181,11 +132,11 @@ async function main() {
     { firstName: 'Paula', lastName: 'Requester', email: 'requester2@local.test', userTypeId: requesterTypeId }
   ];
 
-  for (const user of users) {
+  for (const u of users) {
     await prisma.user.upsert({
-      where: { email: user.email },
-      update: { ...user, passwordHash, isActive: true },
-      create: { ...user, passwordHash, isActive: true }
+      where: { email: u.email },
+      update: { ...u, passwordHash, isActive: true },
+      create: { ...u, passwordHash, isActive: true }
     });
   }
 
@@ -196,31 +147,24 @@ async function main() {
   });
 
   const allUsers = await prisma.user.findMany();
-  const admins = allUsers.filter((user) => user.userTypeId === adminTypeId);
-  const technicians = allUsers.filter((user) => user.userTypeId === techTypeId);
-  const requesters = allUsers.filter((user) => user.userTypeId === requesterTypeId);
+  const admins = allUsers.filter((u) => u.userTypeId === adminTypeId);
+  const technicians = allUsers.filter((u) => u.userTypeId === techTypeId);
+  const requesters = allUsers.filter((u) => u.userTypeId === requesterTypeId);
   const ticketTypeRecords = await prisma.ticketType.findMany();
-
   if (!admins.length || !technicians.length || !requesters.length || !ticketTypeRecords.length) {
-    throw new Error('No hay datos base suficientes para crear tickets de ejemplo.');
+    throw new Error('No hay datos base suficientes.');
   }
 
   const openStatusPool = ['Nuevo', 'En progreso', 'En espera']
-    .map((name) => statusRecords.find((status) => status.name === name))
-    .filter((status): status is NonNullable<typeof status> => Boolean(status));
+    .map((name) => statusRecords.find((s) => s.name === name))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
   const closedStatusPool = ['Resuelto', 'Cerrado']
-    .map((name) => statusRecords.find((status) => status.name === name))
-    .filter((status): status is NonNullable<typeof status> => Boolean(status));
-
-  if (!openStatusPool.length || !closedStatusPool.length) {
-    throw new Error('Los estados abiertos/cerrados requeridos no existen.');
-  }
+    .map((name) => statusRecords.find((s) => s.name === name))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
   const openTicketsTarget = Math.floor(TOTAL_TICKETS * OPEN_RATIO);
-  const resolvedTicketsTarget = TOTAL_TICKETS - openTicketsTarget;
-
-  const createdTickets = [];
+  const createdTicketIds: number[] = [];
 
   for (let index = 0; index < TOTAL_TICKETS; index += 1) {
     const isResolved = index >= openTicketsTarget;
@@ -230,7 +174,7 @@ async function main() {
     const ticket = await prisma.ticket.create({
       data: {
         code: null,
-        title: index === 0 ? 'EJEMPLO' : `EJEMPLO ${index + 1}`,
+        title: 'TEST',
         description: `Ticket de ejemplo ${index + 1} para poblar métricas del dashboard.`,
         ticketTypeId: randomItem(ticketTypeRecords).id,
         priorityId: randomItem(priorityRecords).id,
@@ -245,8 +189,15 @@ async function main() {
     });
 
     const code = formatTicketCode(ticket.id);
-    const updatedTicket = await prisma.ticket.update({ where: { id: ticket.id }, data: { code } });
-    createdTickets.push(updatedTicket);
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        code,
+        title: `${code} - TEST`
+      }
+    });
+
+    createdTicketIds.push(ticket.id);
 
     const historyEvents = isResolved ? randomInt(2, 4) : randomInt(1, 3);
     for (let step = 0; step < historyEvents; step += 1) {
@@ -264,18 +215,27 @@ async function main() {
     }
   }
 
-  const openTickets = createdTickets.filter((ticket) => ticket.resolvedAt === null);
-  const infoRequestSample = openTickets.slice(0, 12);
-  for (const ticket of infoRequestSample) {
+  await prisma.$executeRaw`
+    UPDATE Ticket
+    SET
+      code = 'TM' || printf('%09d', id),
+      title = ('TM' || printf('%09d', id) || ' - TEST')
+    WHERE code IS NULL OR title = 'TEST'
+  `;
+
+  const openTickets = await prisma.ticket.findMany({ where: { resolvedAt: null }, select: { id: true, createdAt: true } });
+  const sampleOpen = openTickets.slice(0, 12);
+
+  for (const t of sampleOpen) {
     const requesterTech = randomItem(technicians);
     const request = await prisma.infoRequest.create({
       data: {
-        ticketId: ticket.id,
+        ticketId: t.id,
         requesterTechId: requesterTech.id,
         message: 'Favor compartir capturas y pasos para reproducir.',
         requestedFields: 'capturas,pasos,error',
         status: Math.random() < 0.5 ? 'OPEN' : 'CLOSED',
-        createdAt: new Date(ticket.createdAt.getTime() + randomInt(60, 720) * 60 * 1000),
+        createdAt: new Date(t.createdAt.getTime() + randomInt(60, 720) * 60 * 1000),
         closedAt: Math.random() < 0.5 ? new Date() : null
       }
     });
@@ -292,9 +252,7 @@ async function main() {
     }
   }
 
-  console.log(`✅ Seed completado: ${TOTAL_TICKETS} tickets (${openTicketsTarget} abiertos, ${resolvedTicketsTarget} resueltos/cerrados).`);
-  console.log(`✅ Ejemplo de código generado: ${formatTicketCode(1)}.`);
-  console.log(`✅ Status disponibles: ${statusRecords.map((status) => `${status.name}(${findStatusId(status.name)})`).join(', ')}.`);
+  console.log(`Seed OK. Ejemplo: ${formatTicketCode(1)} - TEST`);
 }
 
 main()
