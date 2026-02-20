@@ -976,3 +976,47 @@ button.button-link:hover {
   color: #dc2626;
   font-size: 13px;
 }
+
+.dashboard-page {
+  gap: 20px;
+}
+
+.dashboard-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dashboard-filters__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.dashboard-kpis {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.dashboard-kpi p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.dashboard-kpi strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 28px;
+}
+
+.dashboard-charts {
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+}
+
+.dashboard-chart h3 {
+  margin: 0 0 12px;
+}
+
+.dashboard-chart--full {
+  grid-column: 1 / -1;
+}
