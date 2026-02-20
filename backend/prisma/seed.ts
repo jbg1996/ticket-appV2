@@ -2,9 +2,50 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+
 const DEFAULT_STATUS_COLOR = '#9CA3AF';
+const TOTAL_TICKETS = 96;
+const OPEN_RATIO = 0.6;
+const DAYS_WINDOW = 90;
+
+function formatTicketCode(id: number): string {
+  return `TM${id.toString().padStart(9, '0')}`;
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomItem<T>(items: T[]): T {
+  return items[randomInt(0, items.length - 1)];
+}
+
+function randomDateWithinLastDays(days: number): Date {
+  const now = Date.now();
+  const maxOffsetMs = days * 24 * 60 * 60 * 1000;
+  const offset = Math.floor(Math.random() * maxOffsetMs);
+  return new Date(now - offset);
+}
+
+function buildResolvedDate(createdAt: Date): Date {
+  const resolutionMinutes = randomInt(30, 60 * 24 * 14);
+  return new Date(createdAt.getTime() + resolutionMinutes * 60 * 1000);
+}
 
 async function main() {
+  await prisma.attachment.deleteMany();
+  await prisma.infoResponse.deleteMany();
+  await prisma.infoRequest.deleteMany();
+  await prisma.ticketHistory.deleteMany();
+  await prisma.ticket.deleteMany();
+  await prisma.report.deleteMany();
+  await prisma.setting.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.ticketType.deleteMany();
+  await prisma.status.deleteMany();
+  await prisma.priority.deleteMany();
+  await prisma.userType.deleteMany();
+
   const userTypes = [
     { name: 'Admin', code: 'ADMIN' },
     { name: 'Technical', code: 'TECH' },
@@ -27,207 +68,191 @@ async function main() {
   ];
 
   for (const userType of userTypes) {
-    const existingUserType = await prisma.userType.findFirst({ where: { code: userType.code } });
-    if (existingUserType) {
-      await prisma.userType.update({
-        where: { id: existingUserType.id },
-        data: { name: userType.name }
-      });
-      continue;
-    }
-    await prisma.userType.create({ data: userType });
+    const existing = await prisma.userType.findFirst({ where: { code: userType.code } });
+    if (existing) await prisma.userType.update({ where: { id: existing.id }, data: userType });
+    else await prisma.userType.create({ data: userType });
   }
 
   for (const priority of priorities) {
-    const existingPriority = await prisma.priority.findFirst({ where: { name: priority.name } });
-    if (existingPriority) {
-      await prisma.priority.update({
-        where: { id: existingPriority.id },
-        data: { color: priority.color }
-      });
-      continue;
-    }
-    await prisma.priority.create({ data: priority });
+    const existing = await prisma.priority.findFirst({ where: { name: priority.name } });
+    if (existing) await prisma.priority.update({ where: { id: existing.id }, data: priority });
+    else await prisma.priority.create({ data: priority });
   }
 
-  let createdStatuses = 0;
-  let updatedStatuses = 0;
   for (const status of statuses) {
     const existing = await prisma.status.findFirst({ where: { name: status.name } });
-    if (!existing) {
-      await prisma.status.create({ data: status });
-      createdStatuses += 1;
-      continue;
-    }
-    await prisma.status.update({
-      where: { id: existing.id },
-      data: { sortOrder: status.sortOrder, color: status.color || DEFAULT_STATUS_COLOR }
-    });
-    updatedStatuses += 1;
+    const data = { ...status, color: status.color || DEFAULT_STATUS_COLOR };
+    if (existing) await prisma.status.update({ where: { id: existing.id }, data });
+    else await prisma.status.create({ data });
   }
 
-  const createdUserTypes = await prisma.userType.findMany();
+  const userTypeRecords = await prisma.userType.findMany();
   const priorityRecords = await prisma.priority.findMany();
+  const statusRecords = await prisma.status.findMany();
 
-  const getPriorityId = (name: string) => priorityRecords.find((p) => p.name === name)?.id ?? priorityRecords[0].id;
+  const findUserTypeId = (code: string) => userTypeRecords.find((r) => r.code === code)?.id;
+  const findPriorityId = (name: string) =>
+    priorityRecords.find((r) => r.name === name)?.id ?? priorityRecords[0].id;
 
   const ticketTypes = [
-    {
-      name: 'INCIDENCIA',
-      description: 'Describe el incidente y cómo afecta tu trabajo.',
-      defaultPriorityName: 'Alta'
-    },
-    {
-      name: 'PETICIÓN',
-      description: 'Describe la solicitud y el resultado esperado.',
-      defaultPriorityName: 'Media'
-    },
-    {
-      name: 'ACCESO',
-      description: 'Indica el sistema y el nivel de acceso requerid:.',
-      defaultPriorityName: 'Media'
-    },
-    {
-      name: 'HARDWARE',
-      description: 'Describe el equipo y la falla reportada:',
-      defaultPriorityName: 'Alta'
-    },
-    {
-      name: 'SOFTWARE',
-      description: 'Indica la aplicación y los detalles del problema:',
-      defaultPriorityName: 'Media'
-    },
-    {
-      name: 'OTROS',
-      description: 'Proporciona detalles adicionales para la solicitud.',
-      defaultPriorityName: 'Baja'
-    }
+    { name: 'INCIDENCIA', description: 'Describe el incidente y cómo afecta tu trabajo.', defaultPriorityName: 'Alta' },
+    { name: 'PETICIÓN', description: 'Describe la solicitud y el resultado esperado.', defaultPriorityName: 'Media' },
+    { name: 'ACCESO', description: 'Indica el sistema y el nivel de acceso requerido.', defaultPriorityName: 'Media' },
+    { name: 'HARDWARE', description: 'Describe el equipo y la falla reportada.', defaultPriorityName: 'Alta' },
+    { name: 'SOFTWARE', description: 'Indica la aplicación y los detalles del problema.', defaultPriorityName: 'Media' },
+    { name: 'OTROS', description: 'Proporciona detalles adicionales para la solicitud.', defaultPriorityName: 'Baja' }
   ];
 
-  for (const ticketType of ticketTypes) {
-    const existingTicketType = await prisma.ticketType.findFirst({ where: { name: ticketType.name } });
-    const ticketTypeData = {
-      description: ticketType.description,
-      defaultPriorityId: getPriorityId(ticketType.defaultPriorityName),
+  for (const t of ticketTypes) {
+    const data = {
+      description: t.description,
+      defaultPriorityId: findPriorityId(t.defaultPriorityName),
       isActive: true
     };
-
-    if (existingTicketType) {
-      await prisma.ticketType.update({
-        where: { id: existingTicketType.id },
-        data: ticketTypeData
-      });
-      continue;
-    }
-
-    await prisma.ticketType.create({
-      data: {
-        name: ticketType.name,
-        ...ticketTypeData
-      }
-    });
+    const existing = await prisma.ticketType.findFirst({ where: { name: t.name } });
+    if (existing) await prisma.ticketType.update({ where: { id: existing.id }, data });
+    else await prisma.ticketType.create({ data: { name: t.name, ...data } });
   }
 
-  const adminType = createdUserTypes.find((type) => type.code === 'ADMIN');
-  const techType = createdUserTypes.find((type) => type.code === 'TECH');
-  const requesterType = createdUserTypes.find((type) => type.code === 'REQUESTER');
+  const adminTypeId = findUserTypeId('ADMIN');
+  const techTypeId = findUserTypeId('TECH');
+  const requesterTypeId = findUserTypeId('REQUESTER');
+  if (!adminTypeId || !techTypeId || !requesterTypeId) throw new Error('User types base no creados.');
+
   const passwordHash = await bcrypt.hash('Admin123!', 10);
 
   const users = [
-    {
-      firstName: 'Admin',
-      lastName: 'User',
-      email: 'admin@local.test',
-      userTypeId: adminType?.id,
-      isActive: true
-    },
-    {
-      firstName: 'Tania',
-      lastName: 'Tech',
-      email: 'tech@local.test',
-      userTypeId: techType?.id,
-      isActive: true
-    },
-    {
-      firstName: 'Rafa',
-      lastName: 'Requester',
-      email: 'requester@local.test',
-      userTypeId: requesterType?.id,
-      isActive: true
-    }
+    { firstName: 'Admin', lastName: 'Principal', email: 'admin@local.test', userTypeId: adminTypeId },
+    { firstName: 'Lucía', lastName: 'Ops', email: 'tech1@local.test', userTypeId: techTypeId },
+    { firstName: 'Martín', lastName: 'Soporte', email: 'tech2@local.test', userTypeId: techTypeId },
+    { firstName: 'Elena', lastName: 'Infra', email: 'tech3@local.test', userTypeId: techTypeId },
+    { firstName: 'Diego', lastName: 'Apps', email: 'tech4@local.test', userTypeId: techTypeId },
+    { firstName: 'Carla', lastName: 'QA', email: 'tech5@local.test', userTypeId: techTypeId },
+    { firstName: 'Rafa', lastName: 'Requester', email: 'requester1@local.test', userTypeId: requesterTypeId },
+    { firstName: 'Paula', lastName: 'Requester', email: 'requester2@local.test', userTypeId: requesterTypeId }
   ];
 
-  for (const user of users) {
-    if (!user.userTypeId) continue;
+  for (const u of users) {
     await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        userTypeId: user.userTypeId,
-        isActive: user.isActive,
-        passwordHash
-      },
-      create: {
-        ...user,
-        userTypeId: user.userTypeId,
-        passwordHash
-      }
+      where: { email: u.email },
+      update: { ...u, passwordHash, isActive: true },
+      create: { ...u, passwordHash, isActive: true }
     });
   }
 
   await prisma.setting.upsert({
     where: { key: 'HEADER_COLOR' },
     update: { value: '#1f2937' },
-    create: {
-      key: 'HEADER_COLOR',
-      value: '#1f2937'
-    }
+    create: { key: 'HEADER_COLOR', value: '#1f2937' }
   });
 
-  const statusRecords = await prisma.status.findMany();
+  const allUsers = await prisma.user.findMany();
+  const admins = allUsers.filter((u) => u.userTypeId === adminTypeId);
+  const technicians = allUsers.filter((u) => u.userTypeId === techTypeId);
+  const requesters = allUsers.filter((u) => u.userTypeId === requesterTypeId);
   const ticketTypeRecords = await prisma.ticketType.findMany();
-  const requesterUser = await prisma.user.findUnique({ where: { email: 'requester@local.test' } });
-  const techUser = await prisma.user.findUnique({ where: { email: 'tech@local.test' } });
-
-  const getStatusId = (name: string) => statusRecords.find((status) => status.name === name)?.id ?? statusRecords[0].id;
-  const getTypeId = (name: string) => ticketTypeRecords.find((type) => type.name === name)?.id ?? ticketTypeRecords[0].id;
-
-  const ticketCount = await prisma.ticket.count();
-  if (ticketCount === 0 && requesterUser) {
-    await prisma.ticket.createMany({
-      data: [
-        {
-          title: 'No puedo acceder al correo',
-          description: 'Desde esta mañana aparece un error 403 al entrar en el webmail.',
-          ticketTypeId: getTypeId('ACCESO'),
-          priorityId: getPriorityId('Alta'),
-          statusId: getStatusId('Nuevo'),
-          createdById: requesterUser.id
-        },
-        {
-          title: 'Solicitud de software de diseño',
-          description: 'Necesito instalar la última versión de la suite de diseño para el equipo.',
-          ticketTypeId: getTypeId('SOFTWARE'),
-          priorityId: getPriorityId('Media'),
-          statusId: getStatusId('En espera'),
-          createdById: requesterUser.id,
-          assignedToId: techUser?.id ?? null
-        },
-        {
-          title: 'Portátil con pantalla en negro',
-          description: 'El equipo no enciende, la pantalla se queda en negro.',
-          ticketTypeId: getTypeId('HARDWARE'),
-          priorityId: getPriorityId('Crítica'),
-          statusId: getStatusId('En progreso'),
-          createdById: requesterUser.id,
-          assignedToId: techUser?.id ?? null
-        }
-      ]
-    });
+  if (!admins.length || !technicians.length || !requesters.length || !ticketTypeRecords.length) {
+    throw new Error('No hay datos base suficientes.');
   }
 
-  console.log(`Seed statuses: ${createdStatuses} created, ${updatedStatuses} updated.`);
+  const openStatusPool = ['Nuevo', 'En progreso', 'En espera']
+    .map((name) => statusRecords.find((s) => s.name === name))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+
+  const closedStatusPool = ['Resuelto', 'Cerrado']
+    .map((name) => statusRecords.find((s) => s.name === name))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+
+  const openTicketsTarget = Math.floor(TOTAL_TICKETS * OPEN_RATIO);
+  const createdTicketIds: number[] = [];
+
+  for (let index = 0; index < TOTAL_TICKETS; index += 1) {
+    const isResolved = index >= openTicketsTarget;
+    const createdAt = randomDateWithinLastDays(DAYS_WINDOW);
+    const resolvedAt = isResolved ? buildResolvedDate(createdAt) : null;
+
+    const ticket = await prisma.ticket.create({
+      data: {
+        code: null,
+        title: 'TEST',
+        description: `Ticket de ejemplo ${index + 1} para poblar métricas del dashboard.`,
+        ticketTypeId: randomItem(ticketTypeRecords).id,
+        priorityId: randomItem(priorityRecords).id,
+        statusId: isResolved ? randomItem(closedStatusPool).id : randomItem(openStatusPool).id,
+        createdById: randomItem([...admins, ...requesters]).id,
+        assignedToId: Math.random() < 0.82 ? randomItem(technicians).id : null,
+        updatedById: randomItem([...admins, ...technicians]).id,
+        createdAt,
+        resolvedAt,
+        isActive: true
+      }
+    });
+
+    const code = formatTicketCode(ticket.id);
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        code,
+        title: `${code} - TEST`
+      }
+    });
+
+    createdTicketIds.push(ticket.id);
+
+    const historyEvents = isResolved ? randomInt(2, 4) : randomInt(1, 3);
+    for (let step = 0; step < historyEvents; step += 1) {
+      const eventAt = new Date(createdAt.getTime() + step * randomInt(30, 360) * 60 * 1000);
+      await prisma.ticketHistory.create({
+        data: {
+          ticketId: ticket.id,
+          actorId: randomItem([...admins, ...technicians]).id,
+          eventType: step === 0 ? 'CREATED' : 'STATUS_CHANGED',
+          message: step === 0 ? 'Ticket creado desde seed.' : 'Cambio de estado simulado.',
+          dataJson: step === 0 ? null : JSON.stringify({ from: 'Nuevo', to: isResolved ? 'Resuelto' : 'En progreso' }),
+          createdAt: eventAt
+        }
+      });
+    }
+  }
+
+  await prisma.$executeRaw`
+    UPDATE Ticket
+    SET
+      code = 'TM' || printf('%09d', id),
+      title = ('TM' || printf('%09d', id) || ' - TEST')
+    WHERE code IS NULL OR title = 'TEST'
+  `;
+
+  const openTickets = await prisma.ticket.findMany({ where: { resolvedAt: null }, select: { id: true, createdAt: true } });
+  const sampleOpen = openTickets.slice(0, 12);
+
+  for (const t of sampleOpen) {
+    const requesterTech = randomItem(technicians);
+    const request = await prisma.infoRequest.create({
+      data: {
+        ticketId: t.id,
+        requesterTechId: requesterTech.id,
+        message: 'Favor compartir capturas y pasos para reproducir.',
+        requestedFields: 'capturas,pasos,error',
+        status: Math.random() < 0.5 ? 'OPEN' : 'CLOSED',
+        createdAt: new Date(t.createdAt.getTime() + randomInt(60, 720) * 60 * 1000),
+        closedAt: Math.random() < 0.5 ? new Date() : null
+      }
+    });
+
+    if (Math.random() < 0.7) {
+      await prisma.infoResponse.create({
+        data: {
+          infoRequestId: request.id,
+          responderId: randomItem(requesters).id,
+          message: 'Adjunto detalles y pasos solicitados.',
+          createdAt: new Date(request.createdAt.getTime() + randomInt(20, 360) * 60 * 1000)
+        }
+      });
+    }
+  }
+
+  console.log(`Seed OK. Ejemplo: ${formatTicketCode(1)} - TEST`);
 }
 
 main()
