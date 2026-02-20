@@ -5,7 +5,7 @@ type User = { id: number; firstName: string; lastName: string; email: string; is
 
 type Report = { id: number; name: string; createdAt: string };
 
-type Setting = { value: string };
+type AppSettings = { headerColor: string; sidebarColor: string };
 
 type CatalogItem = { id: number; name: string };
 
@@ -37,7 +37,7 @@ export function AdminPage() {
   const loadAll = () => {
     apiFetch<User[]>('/api/users').then(setUsers);
     apiFetch<Report[]>('/api/reports').then(setReports);
-    apiFetch<Setting>('/api/settings/header-color').then((data) => setHeaderColor(data.value));
+    apiFetch<AppSettings>('/api/settings/header-color').then((data) => setHeaderColor(data.headerColor));
     apiFetch<UserType[]>('/api/catalog/user-types').then(setUserTypes);
     apiFetch<CatalogItem[]>('/api/catalog/ticket-types').then(setTicketTypes);
     apiFetch<CatalogItem[]>('/api/catalog/priorities').then(setPriorities);
@@ -61,7 +61,7 @@ export function AdminPage() {
   };
 
   const updateHeader = async () => {
-    await apiFetch('/api/settings/header-color', { method: 'PUT', body: JSON.stringify({ value: headerColor }) });
+    await apiFetch('/api/settings/header-color', { method: 'PUT', body: JSON.stringify({ headerColor }) });
   };
 
   const createStatus = async () => {
