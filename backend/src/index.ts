@@ -46,6 +46,7 @@ import {
 import { uploadAttachment, downloadAttachment, deleteAttachment } from './controllers/attachmentController.js';
 import { generateReportHandler, listReports, downloadReport, deleteReport } from './controllers/reportController.js';
 import { getAppSettings, updateAppSettings } from './controllers/settingsController.js';
+import { getDashboardSummaryHandler } from './controllers/dashboardController.js';
 import { generateReport } from './services/reportService.js';
 
 const app = express();
@@ -193,6 +194,8 @@ app.get('/api/reports/:id/download', noStore, requireAuth, requireAdminRole, dow
 
 app.get('/api/settings/header-color', noStore, requireAuth, getAppSettings);
 app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateAppSettings);
+
+app.get('/api/dashboard/summary', requireAuth, requireRole(['ADMIN', 'TECH']), getDashboardSummaryHandler);
 
 app.use(errorHandler);
 

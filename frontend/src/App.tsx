@@ -46,8 +46,15 @@ function AppShell() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute roles={["ADMIN", "TECH"]}>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/home" element={<HomePage />} />
           <Route path="/recent" element={<RecentTicketsPage />} />
           <Route path="/tickets" element={<TicketsPage />} />
