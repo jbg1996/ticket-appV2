@@ -90,9 +90,9 @@ export function SideBar() {
 
   const items = useMemo(
     () => [
-      ...(canSeeDashboard ? [{ label: 'Dashboard', to: '/dashboard', icon: icons.dashboard }] : []),
       { label: 'Home', to: '/home', icon: icons.home },
       { label: 'Recent', to: '/recent', icon: icons.recent },
+      ...(canSeeDashboard ? [{ label: 'Dashboard', to: '/dashboard', icon: icons.dashboard }] : []),
       { label: 'Tickets', to: '/tickets', icon: icons.ticket },
       { label: 'Report', to: '/reports', icon: icons.report }
     ],
