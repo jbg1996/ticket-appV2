@@ -34,13 +34,17 @@ const toNumber = (value: number | bigint | null | undefined) => {
   return Number.isFinite(numericValue) ? numericValue : 0;
 };
 
+const getDayBucketExpression = (columnName: 'createdAt' | 'resolvedAt') =>
+  Prisma.sql`strftime('%Y-%m-%d', ${Prisma.raw(`"Ticket"."${columnName}"`)} / 1000, 'unixepoch')`;
+
 const getBucketExpression = (columnName: 'createdAt' | 'resolvedAt', granularity: DashboardGranularity) => {
+  const dayBucketExpression = getDayBucketExpression(columnName);
   if (granularity === 'week') {
     // SQLite has no native ISO week bucket. We group by the Monday date for the week,
     // and expose that normalized day string as the API `date` field.
-    return Prisma.sql`date(${Prisma.raw(`"Ticket"."${columnName}"`)}, '-' || ((cast(strftime('%w', ${Prisma.raw(`"Ticket"."${columnName}"`)}) as integer) + 6) % 7) || ' days')`;
+    return Prisma.sql`date(${dayBucketExpression}, '-' || ((cast(strftime('%w', ${dayBucketExpression}) as integer) + 6) % 7) || ' days')`;
   }
-  return Prisma.sql`date(${Prisma.raw(`"Ticket"."${columnName}"`)})`;
+  return dayBucketExpression;
 };
 
 const sortBuckets = (a: string | null | undefined, b: string | null | undefined) => (a ?? '').localeCompare(b ?? '');
@@ -96,6 +100,8 @@ const toSafeHours = (value: number | null | undefined) => {
 
 export async function getDashboardSummary(filters: DashboardFilters) {
   const { start, end, granularity } = filters;
+  const startMs = start.getTime();
+  const endMs = end.getTime();
 
   // NOTE: SQLite + Prisma groupBy does not support truncating DateTime to day/week.
   // We use raw SQL with date()/strftime() to aggregate calendar buckets directly in SQLite.
@@ -105,7 +111,7 @@ export async function getDashboardSummary(filters: DashboardFilters) {
   const createdRows = await prisma.$queryRaw<CreatedResolvedRow[]>(Prisma.sql`
     SELECT ${createdBucketExpression} AS bucket, COUNT(*) AS total
     FROM "Ticket"
-    WHERE "createdAt" >= ${start} AND "createdAt" <= ${end}
+    WHERE "createdAt" >= ${startMs} AND "createdAt" <= ${endMs}
     GROUP BY bucket
     ORDER BY bucket ASC
   `);
@@ -113,7 +119,7 @@ export async function getDashboardSummary(filters: DashboardFilters) {
   const resolvedRows = await prisma.$queryRaw<CreatedResolvedRow[]>(Prisma.sql`
     SELECT ${resolvedBucketExpression} AS bucket, COUNT(*) AS total
     FROM "Ticket"
-    WHERE "resolvedAt" IS NOT NULL AND "resolvedAt" >= ${start} AND "resolvedAt" <= ${end}
+    WHERE "resolvedAt" IS NOT NULL AND "resolvedAt" >= ${startMs} AND "resolvedAt" <= ${endMs}
     GROUP BY bucket
     ORDER BY bucket ASC
   `);
@@ -310,9 +316,9 @@ export async function getDashboardSummary(filters: DashboardFilters) {
   // NOTE: Same SQLite limitation as above. We need $queryRaw for bucketed averages by day/week.
   const mttrRows = await prisma.$queryRaw<MttrRow[]>(Prisma.sql`
     SELECT ${resolvedBucketExpression} AS bucket,
-           AVG((julianday("resolvedAt") - julianday("createdAt")) * 24.0) AS mttrHours
+           AVG(("resolvedAt" - "createdAt") / 3600000.0) AS mttrHours
     FROM "Ticket"
-    WHERE "resolvedAt" IS NOT NULL AND "resolvedAt" >= ${start} AND "resolvedAt" <= ${end}
+    WHERE "resolvedAt" IS NOT NULL AND "resolvedAt" >= ${startMs} AND "resolvedAt" <= ${endMs}
     GROUP BY bucket
     ORDER BY bucket ASC
   `);
