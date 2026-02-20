@@ -10,12 +10,12 @@ export type DashboardFilters = {
 };
 
 type CreatedResolvedRow = {
-  bucket: string;
+  bucket: string | null;
   total: number | bigint;
 };
 
 type MttrRow = {
-  bucket: string;
+  bucket: string | null;
   mttrHours: number | null;
 };
 
@@ -41,7 +41,61 @@ const getBucketExpression = (columnName: 'createdAt' | 'resolvedAt', granularity
   return Prisma.sql`date(${Prisma.raw(`"Ticket"."${columnName}"`)})`;
 };
 
-const sortBuckets = (a: string, b: string) => a.localeCompare(b);
+const sortBuckets = (a: string | null | undefined, b: string | null | undefined) => (a ?? '').localeCompare(b ?? '');
+
+const normalizeBucket = (value: string | null | undefined) => {
+  if (!value) {
+    return null;
+  }
+  const bucket = value.trim();
+  return bucket.length > 0 ? bucket : null;
+};
+
+const toUtcMidnight = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+
+const startOfUtcWeek = (value: Date) => {
+  const day = value.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return new Date(value.getTime() + diff * DAY_IN_MS);
+};
+
+const formatWeekBucket = (value: Date) => {
+  const yearStart = new Date(Date.UTC(value.getUTCFullYear(), 0, 1));
+  const dayOfYear = Math.floor((value.getTime() - yearStart.getTime()) / DAY_IN_MS);
+  const mondayBasedWeekDay = (value.getUTCDay() + 6) % 7;
+  const week = String(Math.floor((dayOfYear + 7 - mondayBasedWeekDay) / 7)).padStart(2, '0');
+  return `${value.getUTCFullYear()}-W${week}`;
+};
+
+const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGranularity) => {
+  const grid: string[] = [];
+
+  if (granularity === 'day') {
+    let cursor = toUtcMidnight(start);
+    const limit = toUtcMidnight(end);
+    while (cursor.getTime() <= limit.getTime()) {
+      grid.push(cursor.toISOString().slice(0, 10));
+      cursor = new Date(cursor.getTime() + DAY_IN_MS);
+    }
+    return grid;
+  }
+
+  let cursor = startOfUtcWeek(toUtcMidnight(start));
+  const limit = toUtcMidnight(end);
+  while (cursor.getTime() <= limit.getTime()) {
+    grid.push(formatWeekBucket(cursor));
+    cursor = new Date(cursor.getTime() + 7 * DAY_IN_MS);
+  }
+  return grid;
+};
+
+const toSafeHours = (value: number | null | undefined) => {
+  const numericValue = Number(value ?? 0);
+  if (!Number.isFinite(numericValue) || numericValue < 0) {
+    return 0;
+  }
+  return Number(numericValue.toFixed(2));
+};
 
 const toUtcMidnight = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
 
@@ -119,14 +173,20 @@ export async function getDashboardSummary(filters: DashboardFilters) {
   );
 
   for (const row of createdRows) {
-    const bucket = row.bucket;
+    const bucket = normalizeBucket(row.bucket);
+    if (!bucket) {
+      continue;
+    }
     const existing = createdVsResolvedMap.get(bucket) ?? { date: bucket, createdCount: 0, resolvedCount: 0 };
     existing.createdCount = toNumber(row.total);
     createdVsResolvedMap.set(bucket, existing);
   }
 
   for (const row of resolvedRows) {
-    const bucket = row.bucket;
+    const bucket = normalizeBucket(row.bucket);
+    if (!bucket) {
+      continue;
+    }
     const existing = createdVsResolvedMap.get(bucket) ?? { date: bucket, createdCount: 0, resolvedCount: 0 };
     existing.resolvedCount = toNumber(row.total);
     createdVsResolvedMap.set(bucket, existing);
@@ -308,7 +368,11 @@ export async function getDashboardSummary(filters: DashboardFilters) {
 
   const mttrMap = new Map<string, number>(timeGrid.map((bucket) => [bucket, 0]));
   for (const row of mttrRows) {
-    mttrMap.set(row.bucket, toSafeHours(row.mttrHours));
+    const bucket = normalizeBucket(row.bucket);
+    if (!bucket) {
+      continue;
+    }
+    mttrMap.set(bucket, toSafeHours(row.mttrHours));
   }
 
   const mttrSeries = Array.from(mttrMap.entries())
