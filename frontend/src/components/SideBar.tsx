@@ -86,16 +86,17 @@ export function SideBar() {
   }, [collapsed]);
 
   const isAdmin = user?.role === 'ADMIN';
+  const canSeeDashboard = user?.role === 'ADMIN' || user?.role === 'TECH';
 
   const items = useMemo(
     () => [
       { label: 'Home', to: '/home', icon: icons.home },
       { label: 'Recent', to: '/recent', icon: icons.recent },
-      { label: 'Dashboard', to: '/dashboard', icon: icons.dashboard },
+      ...(canSeeDashboard ? [{ label: 'Dashboard', to: '/dashboard', icon: icons.dashboard }] : []),
       { label: 'Tickets', to: '/tickets', icon: icons.ticket },
       { label: 'Report', to: '/reports', icon: icons.report }
     ],
-    []
+    [canSeeDashboard]
   );
 
   const adminItems = useMemo(
