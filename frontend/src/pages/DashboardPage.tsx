@@ -122,25 +122,25 @@ export function DashboardPage() {
 
   return (
     <div className="page dashboard-page">
+      <h2>Dashboard</h2>
       <div className="card dashboard-filters">
-        <h2>Dashboard</h2>
         <div className="dashboard-filters__controls">
           <label>
-            Desde
+            From
             <input type="date" value={start} onChange={(event) => setStart(event.target.value)} max={end} />
           </label>
           <label>
-            Hasta
+            Until
             <input type="date" value={end} onChange={(event) => setEnd(event.target.value)} min={start} />
           </label>
           <label>
-            Granularidad
+            Granularity
             <select
               value={granularity}
               onChange={(event) => setGranularity(event.target.value as DashboardGranularity)}
             >
-              <option value="day">Día</option>
-              <option value="week">Semana</option>
+              <option value="day">Day</option>
+              <option value="week">Week</option>
             </select>
           </label>
         </div>
@@ -150,22 +150,22 @@ export function DashboardPage() {
         <div className="card dashboard-error-card">
           <p className="text-error">{error}</p>
           <button type="button" onClick={retry}>
-            Reintentar
+            Retry
           </button>
         </div>
       )}
 
       <div className="grid dashboard-kpis">
         <div className="card dashboard-kpi">
-          <p>Tickets creados</p>
+          <p>Tickets created</p>
           <strong>{data.kpis.totalCreated}</strong>
         </div>
         <div className="card dashboard-kpi">
-          <p>Tickets resueltos</p>
+          <p>Tickets resolved</p>
           <strong>{data.kpis.totalResolved}</strong>
         </div>
         <div className="card dashboard-kpi">
-          <p>Backlog abierto</p>
+          <p>Open backlog</p>
           <strong>{data.kpis.openBacklog}</strong>
         </div>
         <div className="card dashboard-kpi">
@@ -174,11 +174,11 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {loading && <div className="card">Cargando dashboard...</div>}
+      {loading && <div className="card">Loading dashboard...</div>}
 
       <div className="grid dashboard-charts">
         <section className="card dashboard-chart">
-          <h3>Tickets creados vs resueltos</h3>
+          <h3>Tickets created vs resolved</h3>
           {!hasCreatedResolvedData ? (
             <ChartEmptyState />
           ) : (
@@ -208,7 +208,7 @@ export function DashboardPage() {
         </section>
 
         <section className="card dashboard-chart">
-          <h3>Distribución por estado</h3>
+          <h3>Status distribution</h3>
           {!hasStatusData ? (
             <ChartEmptyState />
           ) : (
@@ -253,7 +253,7 @@ export function DashboardPage() {
 
         <section className="card dashboard-chart">
           <h3>
-            Carga por técnico {data.workloadByTech.length > 10 ? <small className="dashboard-note">Top 10</small> : null}
+            Charge per technician {data.workloadByTech.length > 10 ? <small className="dashboard-note">Top 10</small> : null}
           </h3>
           {!hasWorkloadData ? (
             <ChartEmptyState />
@@ -279,7 +279,7 @@ export function DashboardPage() {
         </section>
 
         <section className="card dashboard-chart dashboard-chart--full">
-          <h3>Tendencia MTTR</h3>
+          <h3>Trend MTTR</h3>
           {!hasMttrData ? (
             <ChartEmptyState />
           ) : (
