@@ -29,7 +29,7 @@ export function ReportsPage() {
       .then(setReports)
       .catch((err) => {
         setReports([]);
-        setError(err instanceof Error ? err.message : 'No se pudieron cargar los reportes.');
+        setError(err instanceof Error ? err.message : 'The reports could not be loaded.');
       });
   }, []);
 
@@ -54,7 +54,7 @@ export function ReportsPage() {
       await apiFetch(`/api/reports/${report.id}`, { method: 'DELETE' });
       loadReports();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el reporte.');
+      setError(err instanceof Error ? err.message : 'The report could not be deleted.');
     }
   };
 
@@ -67,7 +67,7 @@ export function ReportsPage() {
     if (!isAdmin) return;
     setError('');
     if (preset === 'CUSTOM' && (!startDate || !endDate)) {
-      setError('Selecciona fechas de inicio y fin.');
+      setError('Select start and end dates.');
       return;
     }
     setLoading(true);
@@ -82,7 +82,7 @@ export function ReportsPage() {
       });
       loadReports();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo generar el reporte.');
+      setError(err instanceof Error ? err.message : 'The report could not be generated.');
     } finally {
       setLoading(false);
     }
@@ -104,17 +104,17 @@ export function ReportsPage() {
                     Preset
                   </label>
                   <select id="preset" value={preset} onChange={(event) => setPreset(event.target.value as PresetOption)}>
-                    <option value="TODAY">Hoy</option>
-                    <option value="THIS_MONTH">Este mes</option>
-                    <option value="YTD">Año en curso</option>
-                    <option value="CUSTOM">Personalizado</option>
+                    <option value="TODAY">Today</option>
+                    <option value="THIS_MONTH">This month</option>
+                    <option value="YTD">Year to date</option>
+                    <option value="CUSTOM">Custom</option>
                   </select>
                 </div>
               </div>
               {preset === 'CUSTOM' ? (
                 <div className="form__row">
                   <label className="form__label" htmlFor="startDate">
-                    Inicio
+                    Start
                   </label>
                   <input
                     id="startDate"
@@ -144,11 +144,11 @@ export function ReportsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Rango</th>
-                <th>Creado</th>
-                <th>Creado por</th>
-                <th>Acciones</th>
+                <th>Name</th>
+                <th>Range</th>
+                <th>Created</th>
+                <th>Created by</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
