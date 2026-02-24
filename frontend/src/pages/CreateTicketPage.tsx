@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
+import { ticketPriorityLabel, ticketTypeLabel } from '../utils/ticketLabels';
 
 type TicketType = {
   id: number;
@@ -42,7 +43,7 @@ export function CreateTicketPage() {
   const selectedTypeData = ticketTypes.find((type) => type.id === selectedType);
   const title = selectedTypeData?.name ?? '';
 
-  const isCustomTitle = useMemo(() => selectedTypeData?.name === 'OTROS', [selectedTypeData]);
+  const isCustomTitle = useMemo(() => selectedTypeData?.name === 'OTHER', [selectedTypeData]);
 
   const handleCreate = async () => {
     if (!selectedType) return;
@@ -64,7 +65,7 @@ export function CreateTicketPage() {
       }
       navigate('/tickets');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el ticket.');
+      setError(err instanceof Error ? err.message : 'Failed to create ticket.');
     } finally {
       setSaving(false);
     }
@@ -85,7 +86,7 @@ export function CreateTicketPage() {
               <option value="">Select</option>
               {ticketTypes.map((type) => (
                 <option key={type.id} value={type.id}>
-                  {type.name}
+                  {ticketTypeLabel(type.name)}
                 </option>
               ))}
             </select>
@@ -113,7 +114,7 @@ export function CreateTicketPage() {
             >
               {priorities.map((priority) => (
                 <option key={priority.id} value={priority.id}>
-                  {priority.name}
+                  {ticketPriorityLabel(priority.name)}
                 </option>
               ))}
             </select>

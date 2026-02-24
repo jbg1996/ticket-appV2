@@ -9,7 +9,7 @@ let statusId = '';
 let priorityId = '';
 let userId = '';
 beforeAll(async () => {
-    const adminType = await prisma.userType.create({ data: { name: 'Administrador', code: 'ADMIN' } });
+    const adminType = await prisma.userType.create({ data: { name: 'Admin', code: 'ADMIN' } });
     const passwordHash = await bcrypt.hash('Password123!', 10);
     const user = await prisma.user.create({
         data: {
@@ -21,13 +21,13 @@ beforeAll(async () => {
         }
     });
     userId = user.id;
-    const priority = await prisma.priority.create({ data: { name: 'Media', color: '#2563eb' } });
+    const priority = await prisma.priority.create({ data: { name: 'MEDIUM', color: '#2563eb' } });
     priorityId = priority.id;
-    const status = await prisma.status.create({ data: { name: 'Nuevo', sortOrder: 1 } });
+    const status = await prisma.status.create({ data: { name: 'NEW', sortOrder: 1 } });
     statusId = status.id;
     const ticketType = await prisma.ticketType.create({
         data: {
-            name: 'PETICIÓN',
+            name: 'REQUEST',
             description: 'Template',
             defaultPriorityId: priorityId,
             isActive: true

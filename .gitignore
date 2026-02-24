@@ -8,3 +8,10 @@ backend/uploads
 backend/reports
 frontend/dist
 backend/dist
+
+# Local Prisma/SQLite databases and sidecar files
+backend/prisma/prisma/dev.db
+backend/prisma/prisma/dev.db-wal
+backend/prisma/prisma/dev.db-shm
+*.db-wal
+*.db-shm
