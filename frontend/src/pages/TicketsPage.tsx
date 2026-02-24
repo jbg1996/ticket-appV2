@@ -22,6 +22,13 @@ type Ticket = {
 };
 
 type SortState = { columnId: string; direction: 'asc' | 'desc' };
+type PaginatedTicketsResponse = {
+  data: Ticket[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
 
 type ColumnDefinition = {
   id: string;
@@ -45,17 +52,45 @@ export function TicketsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [feedback, setFeedback] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
-  const loadTickets = () => {
-    apiFetch<Ticket[]>('/api/tickets')
-      .then(setTickets)
-      .catch(() => setTickets([]));
+  const loadTickets = async (nextPage = page, nextPageSize = pageSize, searchValue = globalSearch) => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      const params = new URLSearchParams({
+        page: nextPage.toString(),
+        pageSize: nextPageSize.toString()
+      });
+      if (searchValue.trim()) {
+        params.set('text', searchValue.trim());
+      }
+      const response = await apiFetch<PaginatedTicketsResponse>(`/api/tickets?${params.toString()}`);
+      setTickets(response.data);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
+      if (response.page !== nextPage) {
+        setPage(response.page);
+      }
+    } catch {
+      setTickets([]);
+      setTotal(0);
+      setTotalPages(1);
+      setLoadError('No se pudieron cargar los tickets.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadTickets();
-  }, []);
+    loadTickets(page, pageSize, globalSearch);
+  }, [page, pageSize, globalSearch]);
 
   useEffect(() => {
     setSelectedIds((prev) => new Set([...prev].filter((id) => tickets.some((ticket) => ticket.id === id))));
@@ -88,18 +123,7 @@ export function TicketsPage() {
     [columnDefinitions]
   );
 
-  const globalSearchFields = useMemo(
-    () => [
-      (ticket: Ticket) => formatTicketDisplayName(ticket),
-      (ticket: Ticket) => ticket.ticketType?.description ?? '',
-      (ticket: Ticket) => ticket.status?.name ?? '',
-      (ticket: Ticket) => ticket.priority?.name ?? '',
-      (ticket: Ticket) => ticket.ticketType?.name ?? '',
-      (ticket: Ticket) => (ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : ''),
-      (ticket: Ticket) => (ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : '')
-    ],
-    []
-  );
+
 
   const normalizeValue = (value: string | number | null | undefined) => (value ?? '').toString().toLowerCase();
 
@@ -209,12 +233,6 @@ export function TicketsPage() {
 
   const applyAll = (data: Ticket[]) => {
     let result = [...data];
-    if (globalSearch.trim()) {
-      const query = globalSearch.toLowerCase();
-      result = result.filter((ticket) =>
-        globalSearchFields.some((field) => normalizeValue(field(ticket)).includes(query))
-      );
-    }
     Object.entries(columnFilters).forEach(([columnId, filter]) => {
       const column = columnMap[columnId];
       if (!column) return;
@@ -239,7 +257,7 @@ export function TicketsPage() {
     return result;
   };
 
-  const displayTickets = useMemo(() => applyAll(tickets), [tickets, globalSearch, columnFilters, sorting]);
+  const displayTickets = useMemo(() => applyAll(tickets), [tickets, columnFilters, sorting]);
   const visibleIds = useMemo(() => displayTickets.map((ticket) => ticket.id), [displayTickets]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const isAdmin = user?.role === 'ADMIN';
@@ -362,8 +380,26 @@ export function TicketsPage() {
             className="tickets-toolbar__search"
             placeholder="Search tickets..."
             value={globalSearch}
-            onChange={(event) => setGlobalSearch(event.target.value)}
+            onChange={(event) => {
+              setGlobalSearch(event.target.value);
+              setPage(1);
+            }}
           />
+          <div className="tickets-toolbar__page-size">
+            <label htmlFor="tickets-page-size">Rows</label>
+            <select
+              id="tickets-page-size"
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
           <div className="tickets-toolbar__actions">
             <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
               <span className="btnInner">
@@ -398,6 +434,7 @@ export function TicketsPage() {
           </div>
         </div>
         {feedback ? <p className="form-error">{feedback}</p> : null}
+        {loadError ? <p className="form-error">{loadError}</p> : null}
         <table className="table">
           <thead>
             <tr>
@@ -461,6 +498,27 @@ export function TicketsPage() {
             )}
           </tbody>
         </table>
+        <div className="tickets-pagination" aria-label="Ticket pagination controls">
+          <span className="tickets-pagination__summary">
+            {isLoading ? 'Loading tickets...' : `${total} tickets`}
+          </span>
+          <div className="tickets-pagination__controls">
+            <button type="button" className="tickets-toolbar__button secondary" onClick={() => setPage((prev) => prev - 1)} disabled={page <= 1 || isLoading}>
+              Previous
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="tickets-toolbar__button secondary"
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={page >= totalPages || isLoading}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

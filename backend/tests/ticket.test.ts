@@ -64,4 +64,26 @@ describe('Ticket creation', () => {
     expect(response.status).toBe(201);
     expect(response.body.creatorId).toBe(userId);
   });
+
+
+  it('returns paginated tickets metadata', async () => {
+    for (let index = 0; index < 25; index += 1) {
+      await request(app)
+        .post('/api/tickets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ ticketTypeId, description: `Need help ${index}`, priorityId });
+    }
+
+    const response = await request(app)
+      .get('/api/tickets?page=2&pageSize=10')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(2);
+    expect(response.body.pageSize).toBe(10);
+    expect(response.body.total).toBeGreaterThanOrEqual(25);
+    expect(response.body.totalPages).toBeGreaterThanOrEqual(3);
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body.data).toHaveLength(10);
+  });
 });
