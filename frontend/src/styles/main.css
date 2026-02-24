@@ -860,6 +860,38 @@ button.button-link:hover {
   flex-wrap: wrap;
 }
 
+
+.tickets-toolbar__page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.tickets-toolbar__page-size select {
+  width: auto;
+  min-width: 70px;
+}
+
+.tickets-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tickets-pagination__summary {
+  color: #475569;
+  font-size: 13px;
+}
+
+.tickets-pagination__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .tickets-toolbar__button {
   display: inline-flex;
   align-items: center;

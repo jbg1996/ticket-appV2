@@ -109,9 +109,14 @@ export async function listTickets(req: AuthRequest, res: Response) {
     baseWhere
   });
 
-  const pageNumber = Number(page) || 1;
-  const pageSizeNumber = Number(pageSize) || 50;
-  const skip = pageNumber > 1 ? (pageNumber - 1) * pageSizeNumber : 0;
+  const parsedPageNumber = Number(page);
+  const parsedPageSizeNumber = Number(pageSize);
+  const pageNumber = Number.isInteger(parsedPageNumber) && parsedPageNumber > 0 ? parsedPageNumber : 1;
+  const pageSizeNumber = Number.isInteger(parsedPageSizeNumber) && parsedPageSizeNumber > 0 ? parsedPageSizeNumber : 20;
+  const skip = (pageNumber - 1) * pageSizeNumber;
+
+  const total = await prisma.ticket.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / pageSizeNumber));
 
   const tickets = await prisma.ticket.findMany({
     where,
@@ -126,7 +131,13 @@ export async function listTickets(req: AuthRequest, res: Response) {
     skip,
     take: pageSizeNumber
   });
-  res.json(tickets);
+  res.json({
+    data: tickets,
+    page: pageNumber,
+    pageSize: pageSizeNumber,
+    total,
+    totalPages
+  });
 }
 
 export async function searchTickets(req: AuthRequest, res: Response) {
