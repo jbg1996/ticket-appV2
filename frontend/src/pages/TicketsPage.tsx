@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
+import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../utils/ticketLabels';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
@@ -467,9 +468,9 @@ export function TicketsPage() {
                 <td>
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
-                <td>{ticket.status.name}</td>
-                <td>{ticket.priority.name}</td>
-                <td>{ticket.ticketType.name}</td>
+                <td>{ticketStatusLabel(ticket.status.name)}</td>
+                <td>{ticketPriorityLabel(ticket.priority.name)}</td>
+                <td>{ticketTypeLabel(ticket.ticketType.name)}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
                 <td>{formatDate(ticket.updatedAt)}</td>
                 <td>{ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : '—'}</td>

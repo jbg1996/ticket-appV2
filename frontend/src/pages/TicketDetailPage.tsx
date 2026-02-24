@@ -5,6 +5,7 @@ import { apiFetch, apiFetchBlob, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../utils/ticketLabels';
 
 type Ticket = {
   id: number;
@@ -23,7 +24,7 @@ type Status = { id: number; name: string; color?: string | null };
 
 type Priority = { id: number; name: string };
 
-type User = { id: number; firstName: string; lastName: string; isActive: boolean; userType: { name: string } };
+type User = { id: number; firstName: string; lastName: string; isActive: boolean; userType: { name: string; code: string } };
 
 export function TicketDetailPage() {
   const { id } = useParams();
@@ -117,7 +118,7 @@ export function TicketDetailPage() {
     apiFetch<Priority[]>('/api/catalog/priorities').then(setPriorities);
     if (isAdmin) {
       apiFetch<User[]>('/api/users').then((users) =>
-        setAssignees(users.filter((candidate) => candidate.isActive && candidate.userType.name === 'Técnico'))
+        setAssignees(users.filter((candidate) => candidate.isActive && candidate.userType.code === 'TECH'))
       );
     }
   }, [isAdmin]);
@@ -187,7 +188,7 @@ export function TicketDetailPage() {
         current ? { ...current, attachments: current.attachments.filter((attachment) => attachment.id !== attachmentId) } : current
       );
     } catch (deleteError) {
-      setAttachmentError(deleteError instanceof Error ? deleteError.message : 'No autorizado');
+      setAttachmentError(deleteError instanceof Error ? deleteError.message : 'Unauthorized');
     }
   };
 
@@ -236,7 +237,7 @@ export function TicketDetailPage() {
       });
       loadTicket();
     } catch (error) {
-      setAdminError('No autorizado');
+      setAdminError('Unauthorized');
     }
   };
 
@@ -248,7 +249,7 @@ export function TicketDetailPage() {
       await apiFetch(`/api/tickets/${ticketId}`, { method: 'DELETE' });
       window.location.href = '/tickets';
     } catch (error) {
-      setAdminError(error instanceof Error ? error.message : 'No autorizado');
+      setAdminError(error instanceof Error ? error.message : 'Unauthorized');
     }
   };
 
@@ -317,7 +318,7 @@ export function TicketDetailPage() {
                   <PopoverContent className="ticket-detail__assignee-popover">
                     <input
                       type="text"
-                      placeholder="Buscar técnico..."
+                      placeholder="Search technician..."
                       value={assigneeQuery}
                       onChange={(event) => setAssigneeQuery(event.target.value)}
                     />
@@ -354,11 +355,11 @@ export function TicketDetailPage() {
           <div className="ticket-detail__meta">
             <div className="ticket-detail__meta-item">
               <span className="ticket-detail__meta-label">Type</span>
-              <span className="ticket-detail__meta-value">{ticket.ticketType.name}</span>
+              <span className="ticket-detail__meta-value">{ticketTypeLabel(ticket.ticketType.name)}</span>
             </div>
             <div className="ticket-detail__meta-item">
               <span className="ticket-detail__meta-label">Priority</span>
-              <span className="ticket-detail__meta-value">{ticket.priority.name}</span>
+              <span className="ticket-detail__meta-value">{ticketPriorityLabel(ticket.priority.name)}</span>
             </div>
             <div className="ticket-detail__meta-item">
               <span className="ticket-detail__meta-label">Status</span>
@@ -372,7 +373,7 @@ export function TicketDetailPage() {
                     >
                       {statuses.map((status) => (
                         <option key={status.id} value={status.id}>
-                          {status.name}
+                          {ticketStatusLabel(status.name)}
                         </option>
                       ))}
                     </select>
@@ -382,7 +383,7 @@ export function TicketDetailPage() {
                 <div className="ticket-detail__state-readonly">
                   <div className="ticket-detail__state-control">
                     <span className="ticket-detail__state-dot" style={{ backgroundColor: statusColor }} aria-hidden="true" />
-                    <span>{ticket.status.name}</span>
+                    <span>{ticketStatusLabel(ticket.status.name)}</span>
                   </div>
                 </div>
               )}
@@ -444,7 +445,7 @@ export function TicketDetailPage() {
                   >
                     {priorities.map((priority) => (
                       <option key={priority.id} value={priority.id}>
-                        {priority.name}
+                        {ticketPriorityLabel(priority.name)}
                       </option>
                     ))}
                   </select>
