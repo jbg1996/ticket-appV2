@@ -385,21 +385,6 @@ export function TicketsPage() {
               setPage(1);
             }}
           />
-          <div className="tickets-toolbar__page-size">
-            <label htmlFor="tickets-page-size">Rows</label>
-            <select
-              id="tickets-page-size"
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(1);
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
           <div className="tickets-toolbar__actions">
             <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
               <span className="btnInner">
@@ -503,6 +488,21 @@ export function TicketsPage() {
             {isLoading ? 'Loading tickets...' : `${total} tickets`}
           </span>
           <div className="tickets-pagination__controls">
+            <div className="tickets-pagination__page-size">
+              <label htmlFor="tickets-page-size">Rows</label>
+              <select
+                id="tickets-page-size"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
             <button type="button" className="tickets-toolbar__button secondary" onClick={() => setPage((prev) => prev - 1)} disabled={page <= 1 || isLoading}>
               Previous
             </button>

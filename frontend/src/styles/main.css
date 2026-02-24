@@ -861,14 +861,14 @@ button.button-link:hover {
 }
 
 
-.tickets-toolbar__page-size {
+.tickets-pagination__page-size {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
 }
 
-.tickets-toolbar__page-size select {
+.tickets-pagination__page-size select {
   width: auto;
   min-width: 70px;
 }
