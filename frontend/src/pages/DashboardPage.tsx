@@ -34,14 +34,14 @@ const formatShortDate = (bucket: string, granularity: DashboardGranularity) => {
   }
 
   if (granularity === 'week') {
-    return new Intl.DateTimeFormat('es-ES', {
+    return new Intl.DateTimeFormat('en-US', {
       timeZone: 'UTC',
       day: '2-digit',
       month: 'short'
     }).format(date);
   }
 
-  return new Intl.DateTimeFormat('es-ES', {
+  return new Intl.DateTimeFormat('en-US', {
     timeZone: 'UTC',
     day: '2-digit',
     month: 'short'
@@ -56,22 +56,22 @@ const formatFullDate = (bucket: string, granularity: DashboardGranularity) => {
 
   if (granularity === 'week') {
     const weekEndDate = new Date(date.getTime() + 6 * 24 * 60 * 60 * 1000);
-    const startLabel = new Intl.DateTimeFormat('es-ES', {
+    const startLabel = new Intl.DateTimeFormat('en-US', {
       timeZone: 'UTC',
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     }).format(date);
-    const endLabel = new Intl.DateTimeFormat('es-ES', {
+    const endLabel = new Intl.DateTimeFormat('en-US', {
       timeZone: 'UTC',
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     }).format(weekEndDate);
-    return `Semana (${startLabel} - ${endLabel})`;
+    return `Week (${startLabel} - ${endLabel})`;
   }
 
-  return new Intl.DateTimeFormat('es-ES', {
+  return new Intl.DateTimeFormat('en-US', {
     timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
@@ -200,8 +200,8 @@ export function DashboardPage() {
                   }
                 />
                 <Legend />
-                <Area type="monotone" dataKey="createdCount" name="Creados" stroke="#2563eb" fill="#93c5fd" />
-                <Area type="monotone" dataKey="resolvedCount" name="Resueltos" stroke="#16a34a" fill="#86efac" />
+                <Area type="monotone" dataKey="createdCount" name="Created" stroke="#2563eb" fill="#93c5fd" />
+                <Area type="monotone" dataKey="resolvedCount" name="Resolved" stroke="#16a34a" fill="#86efac" />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -271,8 +271,8 @@ export function DashboardPage() {
                   }
                 />
                 <Legend />
-                <Bar dataKey="openAssignedCount" name="Abiertos" fill="#3b82f6" />
-                <Bar dataKey="resolvedInRangeCount" name="Resueltos en rango" fill="#22c55e" />
+                <Bar dataKey="openAssignedCount" name="Open" fill="#3b82f6" />
+                <Bar dataKey="resolvedInRangeCount" name="Resolved in range" fill="#22c55e" />
               </BarChart>
             </ResponsiveContainer>
           )}
