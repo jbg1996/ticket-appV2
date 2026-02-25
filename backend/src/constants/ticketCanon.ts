@@ -1,75 +1,70 @@
-const canonicalTicketStatus = {
-  new: 'new',
-  inProgress: 'inProgress',
-  onHold: 'onHold',
-  resolved: 'resolved',
-  closed: 'closed'
+export const TICKET_STATUS = {
+  NEW: 'NEW',
+  IN_PROGRESS: 'IN_PROGRESS',
+  ON_HOLD: 'ON_HOLD',
+  RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED'
 } as const;
 
-const canonicalTicketPriority = {
-  low: 'low',
-  medium: 'medium',
-  high: 'high',
-  critical: 'critical'
+export const TICKET_PRIORITY = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH',
+  CRITICAL: 'CRITICAL'
 } as const;
 
-const canonicalTicketType = {
-  request: 'request',
-  incident: 'incident',
-  access: 'access',
-  hardware: 'hardware',
-  software: 'software',
-  other: 'other'
+export const TICKET_TYPE = {
+  REQUEST: 'REQUEST',
+  INCIDENT: 'INCIDENT',
+  ACCESS: 'ACCESS',
+  HARDWARE: 'HARDWARE',
+  SOFTWARE: 'SOFTWARE',
+  OTHER: 'OTHER'
 } as const;
 
-export { canonicalTicketStatus, canonicalTicketPriority, canonicalTicketType };
+export type TicketStatusName = (typeof TICKET_STATUS)[keyof typeof TICKET_STATUS];
 
-export type TicketStatusCode = (typeof canonicalTicketStatus)[keyof typeof canonicalTicketStatus];
-
-export const statusTransitions: Record<TicketStatusCode, TicketStatusCode[]> = {
-  [canonicalTicketStatus.new]: [canonicalTicketStatus.inProgress, canonicalTicketStatus.onHold],
-  [canonicalTicketStatus.inProgress]: [canonicalTicketStatus.onHold, canonicalTicketStatus.resolved],
-  [canonicalTicketStatus.onHold]: [canonicalTicketStatus.inProgress, canonicalTicketStatus.resolved],
-  [canonicalTicketStatus.resolved]: [canonicalTicketStatus.closed],
-  [canonicalTicketStatus.closed]: []
+export const LEGACY_STATUS_TO_CANONICAL: Record<string, TicketStatusName> = {
+  Nuevo: TICKET_STATUS.NEW,
+  NUEVO: TICKET_STATUS.NEW,
+  'En progreso': TICKET_STATUS.IN_PROGRESS,
+  EN_PROGRESO: TICKET_STATUS.IN_PROGRESS,
+  'En espera': TICKET_STATUS.ON_HOLD,
+  EN_ESPERA: TICKET_STATUS.ON_HOLD,
+  Resuelto: TICKET_STATUS.RESOLVED,
+  RESUELTO: TICKET_STATUS.RESOLVED,
+  Cerrado: TICKET_STATUS.CLOSED,
+  CERRADO: TICKET_STATUS.CLOSED
 };
 
-const normalizeDelimitedCode = (value: string) =>
-  value
-    .trim()
-    .replace(/[\s-]+/g, '_')
-    .split('_')
-    .filter(Boolean)
-    .map((segment) => segment.toLowerCase())
-    .map((segment, index) => (index === 0 ? segment : `${segment.charAt(0).toUpperCase()}${segment.slice(1)}`))
-    .join('');
-
-const canonicalStatusByLower: Record<string, TicketStatusCode> = Object.values(canonicalTicketStatus).reduce(
-  (accumulator, code) => ({ ...accumulator, [code.toLowerCase()]: code }),
-  {} as Record<string, TicketStatusCode>
-);
-
-const canonicalPriorityByLower: Record<string, string> = Object.values(canonicalTicketPriority).reduce(
-  (accumulator, code) => ({ ...accumulator, [code.toLowerCase()]: code }),
-  {} as Record<string, string>
-);
-
-const canonicalTypeByLower: Record<string, string> = Object.values(canonicalTicketType).reduce(
-  (accumulator, code) => ({ ...accumulator, [code.toLowerCase()]: code }),
-  {} as Record<string, string>
-);
-
-export const normalizeStatusName = (value: string) => {
-  const normalized = normalizeDelimitedCode(value);
-  return canonicalStatusByLower[normalized.toLowerCase()] ?? normalized;
+export const LEGACY_PRIORITY_TO_CANONICAL: Record<string, string> = {
+  Baja: TICKET_PRIORITY.LOW,
+  BAJA: TICKET_PRIORITY.LOW,
+  Media: TICKET_PRIORITY.MEDIUM,
+  MEDIA: TICKET_PRIORITY.MEDIUM,
+  Alta: TICKET_PRIORITY.HIGH,
+  ALTA: TICKET_PRIORITY.HIGH,
+  Crítica: TICKET_PRIORITY.CRITICAL,
+  CRITICA: TICKET_PRIORITY.CRITICAL,
+  CRÍTICA: TICKET_PRIORITY.CRITICAL
 };
 
-export const normalizePriorityName = (value: string) => {
-  const normalized = normalizeDelimitedCode(value);
-  return canonicalPriorityByLower[normalized.toLowerCase()] ?? normalized;
+export const LEGACY_TYPE_TO_CANONICAL: Record<string, string> = {
+  PETICIÓN: TICKET_TYPE.REQUEST,
+  PETICION: TICKET_TYPE.REQUEST,
+  INCIDENCIA: TICKET_TYPE.INCIDENT,
+  ACCESO: TICKET_TYPE.ACCESS,
+  OTROS: TICKET_TYPE.OTHER
 };
 
-export const normalizeTypeName = (value: string) => {
-  const normalized = normalizeDelimitedCode(value);
-  return canonicalTypeByLower[normalized.toLowerCase()] ?? normalized;
+export const STATUS_TRANSITIONS: Record<TicketStatusName, TicketStatusName[]> = {
+  [TICKET_STATUS.NEW]: [TICKET_STATUS.IN_PROGRESS, TICKET_STATUS.ON_HOLD],
+  [TICKET_STATUS.IN_PROGRESS]: [TICKET_STATUS.ON_HOLD, TICKET_STATUS.RESOLVED],
+  [TICKET_STATUS.ON_HOLD]: [TICKET_STATUS.IN_PROGRESS, TICKET_STATUS.RESOLVED],
+  [TICKET_STATUS.RESOLVED]: [TICKET_STATUS.CLOSED],
+  [TICKET_STATUS.CLOSED]: []
 };
+
+export const normalizeStatusName = (value: string) => LEGACY_STATUS_TO_CANONICAL[value] ?? value;
+export const normalizePriorityName = (value: string) => LEGACY_PRIORITY_TO_CANONICAL[value] ?? value;
+export const normalizeTypeName = (value: string) => LEGACY_TYPE_TO_CANONICAL[value] ?? value;

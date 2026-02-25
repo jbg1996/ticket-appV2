@@ -6,13 +6,12 @@ import { ticketPriorityLabel, ticketTypeLabel } from '../constants/ticketLabels'
 
 type TicketType = {
   id: number;
-  code: string;
-  label?: string | null;
+  name: string;
   description: string;
   defaultPriorityId: number;
 };
 
-type Priority = { id: number; code: string; label?: string | null };
+type Priority = { id: number; name: string };
 
 type TicketResponse = { id: number };
 
@@ -42,9 +41,9 @@ export function CreateTicketPage() {
   }, [selectedType, ticketTypes]);
 
   const selectedTypeData = ticketTypes.find((type) => type.id === selectedType);
-  const title = selectedTypeData?.label ?? ticketTypeLabel(selectedTypeData?.code ?? '');
+  const title = selectedTypeData?.name ?? '';
 
-  const isCustomTitle = useMemo(() => selectedTypeData?.code === 'other', [selectedTypeData]);
+  const isCustomTitle = useMemo(() => selectedTypeData?.name === 'OTHER', [selectedTypeData]);
 
   const handleCreate = async () => {
     if (!selectedType) return;
@@ -87,7 +86,7 @@ export function CreateTicketPage() {
               <option value="">Select</option>
               {ticketTypes.map((type) => (
                 <option key={type.id} value={type.id}>
-                  {ticketTypeLabel(type.label ?? type.code)}
+                  {ticketTypeLabel(type.name)}
                 </option>
               ))}
             </select>
@@ -115,7 +114,7 @@ export function CreateTicketPage() {
             >
               {priorities.map((priority) => (
                 <option key={priority.id} value={priority.id}>
-                  {ticketPriorityLabel(priority.label ?? priority.code)}
+                  {ticketPriorityLabel(priority.name)}
                 </option>
               ))}
             </select>

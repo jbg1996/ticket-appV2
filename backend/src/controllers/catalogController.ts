@@ -2,28 +2,6 @@ import { Request, Response } from 'express';
 import prisma from '../prisma/client.js';
 import { parseId, parseOptionalId } from '../utils/parseId.js';
 
-const toCode = (value: string) =>
-  value
-    .trim()
-    .replace(/[\s-]+/g, '_')
-    .split('_')
-    .filter(Boolean)
-    .map((segment) => segment.toLowerCase())
-    .map((segment, index) => (index === 0 ? segment : `${segment.charAt(0).toUpperCase()}${segment.slice(1)}`))
-    .join('');
-
-const toLabel = (value: string) =>
-  toCode(value)
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/^./, (char) => char.toUpperCase());
-
-const pickCodeAndLabel = (payload: { code?: string; label?: string; name?: string }) => {
-  const source = payload.code ?? payload.name;
-  if (!source) return { code: undefined, label: payload.label };
-  const code = toCode(source);
-  return { code, label: payload.label?.trim() || toLabel(code) };
-};
-
 export async function listUserTypes(_req: Request, res: Response) {
   const items = await prisma.userType.findMany();
   res.json(items);
@@ -35,18 +13,19 @@ export async function listStatuses(_req: Request, res: Response) {
 }
 
 export async function createStatus(req: Request, res: Response) {
-  const { sortOrder, color } = req.body as { sortOrder?: number; color?: string };
-  const { code, label } = pickCodeAndLabel(req.body as { code?: string; label?: string; name?: string });
-  if (!code || Number.isNaN(Number(sortOrder))) {
-    return res.status(400).json({ message: 'Code and sortOrder are required.' });
+  const { name, sortOrder, color } = req.body as { name?: string; sortOrder?: number; color?: string };
+  if (!name || typeof name !== 'string' || Number.isNaN(Number(sortOrder))) {
+    console.warn('createStatus validation failed', { name, sortOrder });
+    return res.status(400).json({ message: 'Name and sortOrder are required.' });
   }
-  const existing = await prisma.status.findFirst({ where: { code } });
+  const existing = await prisma.status.findFirst({ where: { name } });
   if (existing) {
-    return res.status(400).json({ message: 'Status code already exists.' });
+    return res.status(400).json({ message: 'Status name already exists.' });
   }
   const status = await prisma.status.create({
-    data: { name: code, code, label: label ?? toLabel(code), sortOrder: Number(sortOrder), color: color?.trim() || undefined }
+    data: { name: name.trim(), sortOrder: Number(sortOrder), color: color?.trim() || undefined }
   });
+  console.info('Created status', { id: status.id });
   res.status(201).json(status);
 }
 
@@ -55,34 +34,43 @@ export async function updateStatus(req: Request, res: Response) {
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid status id.' });
   }
-  const { sortOrder, color } = req.body as { sortOrder?: number; color?: string };
-  const { code, label } = pickCodeAndLabel(req.body as { code?: string; label?: string; name?: string });
-  if (!code && typeof sortOrder === 'undefined' && typeof color === 'undefined' && typeof label === 'undefined') {
-    return res.status(400).json({ message: 'Provide code, label, sortOrder, or color to update.' });
+  const { name, sortOrder, color } = req.body as { name?: string; sortOrder?: number; color?: string };
+  if (!name && typeof sortOrder === 'undefined' && typeof color === 'undefined') {
+    return res.status(400).json({ message: 'Provide name, sortOrder, or color to update.' });
   }
-  if (code) {
-    const duplicate = await prisma.status.findFirst({ where: { code, NOT: { id: parsedId } } });
+  const existing = await prisma.status.findUnique({ where: { id: parsedId } });
+  if (!existing) {
+    return res.status(404).json({ message: 'Status not found.' });
+  }
+  if (name) {
+    const duplicate = await prisma.status.findFirst({ where: { name, NOT: { id: parsedId } } });
     if (duplicate) {
-      return res.status(400).json({ message: 'Status code already exists.' });
+      return res.status(400).json({ message: 'Status name already exists.' });
     }
   }
   const status = await prisma.status.update({
     where: { id: parsedId },
     data: {
-      code,
-      name: code,
-      label: typeof label === 'undefined' ? undefined : label,
+      name: name?.trim(),
       sortOrder: typeof sortOrder === 'undefined' ? undefined : Number(sortOrder),
       color: typeof color === 'undefined' ? undefined : color.trim()
     }
   });
+  console.info('Updated status', { id: parsedId });
   res.json(status);
 }
 
 export async function deleteStatus(req: Request, res: Response) {
   const parsedId = parseId(req.params.id);
-  if (!parsedId) return res.status(400).json({ message: 'Invalid status id.' });
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid status id.' });
+  }
+  const existing = await prisma.status.findUnique({ where: { id: parsedId } });
+  if (!existing) {
+    return res.status(404).json({ message: 'Status not found.' });
+  }
   await prisma.status.delete({ where: { id: parsedId } });
+  console.info('Deleted status', { id: parsedId });
   res.status(204).send();
 }
 
@@ -92,36 +80,58 @@ export async function listPriorities(_req: Request, res: Response) {
 }
 
 export async function createPriority(req: Request, res: Response) {
-  const { color } = req.body as { color?: string };
-  const { code, label } = pickCodeAndLabel(req.body as { code?: string; label?: string; name?: string });
-  if (!code || !color) return res.status(400).json({ message: 'Code and color are required.' });
-  const existing = await prisma.priority.findFirst({ where: { code } });
-  if (existing) return res.status(400).json({ message: 'Priority code already exists.' });
-  const priority = await prisma.priority.create({ data: { name: code, code, label: label ?? toLabel(code), color: color.trim() } });
+  const { name, color } = req.body as { name?: string; color?: string };
+  if (!name || !color) {
+    console.warn('createPriority validation failed', { name, color });
+    return res.status(400).json({ message: 'Name and color are required.' });
+  }
+  const existing = await prisma.priority.findFirst({ where: { name } });
+  if (existing) {
+    return res.status(400).json({ message: 'Priority name already exists.' });
+  }
+  const priority = await prisma.priority.create({ data: { name: name.trim(), color: color.trim() } });
+  console.info('Created priority', { id: priority.id });
   res.status(201).json(priority);
 }
 
 export async function updatePriority(req: Request, res: Response) {
   const parsedId = parseId(req.params.id);
-  if (!parsedId) return res.status(400).json({ message: 'Invalid priority id.' });
-  const { color } = req.body as { color?: string };
-  const { code, label } = pickCodeAndLabel(req.body as { code?: string; label?: string; name?: string });
-  if (!code && !color && typeof label === 'undefined') return res.status(400).json({ message: 'Provide code, label or color to update.' });
-  if (code) {
-    const duplicate = await prisma.priority.findFirst({ where: { code, NOT: { id: parsedId } } });
-    if (duplicate) return res.status(400).json({ message: 'Priority code already exists.' });
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid priority id.' });
+  }
+  const { name, color } = req.body as { name?: string; color?: string };
+  if (!name && !color) {
+    return res.status(400).json({ message: 'Provide name or color to update.' });
+  }
+  const existing = await prisma.priority.findUnique({ where: { id: parsedId } });
+  if (!existing) {
+    return res.status(404).json({ message: 'Priority not found.' });
+  }
+  if (name) {
+    const duplicate = await prisma.priority.findFirst({ where: { name, NOT: { id: parsedId } } });
+    if (duplicate) {
+      return res.status(400).json({ message: 'Priority name already exists.' });
+    }
   }
   const priority = await prisma.priority.update({
     where: { id: parsedId },
-    data: { code, name: code, label: typeof label === 'undefined' ? undefined : label, color: color?.trim() }
+    data: { name: name?.trim(), color: color?.trim() }
   });
+  console.info('Updated priority', { id: parsedId });
   res.json(priority);
 }
 
 export async function deletePriority(req: Request, res: Response) {
   const parsedId = parseId(req.params.id);
-  if (!parsedId) return res.status(400).json({ message: 'Invalid priority id.' });
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid priority id.' });
+  }
+  const existing = await prisma.priority.findUnique({ where: { id: parsedId } });
+  if (!existing) {
+    return res.status(404).json({ message: 'Priority not found.' });
+  }
   await prisma.priority.delete({ where: { id: parsedId } });
+  console.info('Deleted priority', { id: parsedId });
   res.status(204).send();
 }
 
@@ -131,50 +141,81 @@ export async function listTicketTypes(_req: Request, res: Response) {
 }
 
 export async function createTicketType(req: Request, res: Response) {
-  const { description, defaultPriorityId } = req.body as { description?: string; defaultPriorityId?: number };
-  const { code, label } = pickCodeAndLabel(req.body as { code?: string; label?: string; name?: string });
-  if (!code || !description || !defaultPriorityId) {
-    return res.status(400).json({ message: 'Code, description, and defaultPriorityId are required.' });
+  const { name, description, defaultPriorityId } = req.body as { name?: string; description?: string; defaultPriorityId?: number };
+  if (!name || !description || !defaultPriorityId) {
+    console.warn('createTicketType validation failed', { name, description, defaultPriorityId });
+    return res.status(400).json({ message: 'Name, description, and defaultPriorityId are required.' });
   }
   const parsedDefaultPriorityId = parseId(defaultPriorityId);
-  if (!parsedDefaultPriorityId) return res.status(400).json({ message: 'Default priority not found.' });
-  const existing = await prisma.ticketType.findFirst({ where: { code } });
-  if (existing) return res.status(400).json({ message: 'Ticket type code already exists.' });
+  if (!parsedDefaultPriorityId) {
+    return res.status(400).json({ message: 'Default priority not found.' });
+  }
+  const existing = await prisma.ticketType.findFirst({ where: { name } });
+  if (existing) {
+    return res.status(400).json({ message: 'Ticket type name already exists.' });
+  }
+  const defaultPriority = await prisma.priority.findUnique({ where: { id: parsedDefaultPriorityId } });
+  if (!defaultPriority) {
+    return res.status(400).json({ message: 'Default priority not found.' });
+  }
   const ticketType = await prisma.ticketType.create({
-    data: { name: code, code, label: label ?? toLabel(code), description: description.trim(), defaultPriorityId: parsedDefaultPriorityId }
+    data: { name: name.trim(), description: description.trim(), defaultPriorityId: parsedDefaultPriorityId }
   });
+  console.info('Created ticket type', { id: ticketType.id });
   res.status(201).json(ticketType);
 }
 
 export async function updateTicketType(req: Request, res: Response) {
   const parsedId = parseId(req.params.id);
-  if (!parsedId) return res.status(400).json({ message: 'Invalid ticket type id.' });
-  const { description, defaultPriorityId } = req.body as { description?: string; defaultPriorityId?: number };
-  const { code, label } = pickCodeAndLabel(req.body as { code?: string; label?: string; name?: string });
-  if (!code && !description && !defaultPriorityId && typeof label === 'undefined') {
-    return res.status(400).json({ message: 'Provide code, label, description, or defaultPriorityId to update.' });
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid ticket type id.' });
   }
-  if (code) {
-    const duplicate = await prisma.ticketType.findFirst({ where: { code, NOT: { id: parsedId } } });
-    if (duplicate) return res.status(400).json({ message: 'Ticket type code already exists.' });
+  const { name, description, defaultPriorityId } = req.body as {
+    name?: string;
+    description?: string;
+    defaultPriorityId?: number;
+  };
+  if (!name && !description && !defaultPriorityId) {
+    return res.status(400).json({ message: 'Provide name, description, or defaultPriorityId to update.' });
+  }
+  const existing = await prisma.ticketType.findUnique({ where: { id: parsedId } });
+  if (!existing) {
+    return res.status(404).json({ message: 'Ticket type not found.' });
+  }
+  if (name) {
+    const duplicate = await prisma.ticketType.findFirst({ where: { name, NOT: { id: parsedId } } });
+    if (duplicate) {
+      return res.status(400).json({ message: 'Ticket type name already exists.' });
+    }
   }
   const parsedDefaultPriorityId = parseOptionalId(defaultPriorityId);
+  if (defaultPriorityId && !parsedDefaultPriorityId) {
+    return res.status(400).json({ message: 'Default priority not found.' });
+  }
+  if (parsedDefaultPriorityId) {
+    const defaultPriority = await prisma.priority.findUnique({ where: { id: parsedDefaultPriorityId } });
+    if (!defaultPriority) {
+      return res.status(400).json({ message: 'Default priority not found.' });
+    }
+  }
   const ticketType = await prisma.ticketType.update({
     where: { id: parsedId },
-    data: {
-      code,
-      name: code,
-      label: typeof label === 'undefined' ? undefined : label,
-      description: description?.trim(),
-      defaultPriorityId: parsedDefaultPriorityId
-    }
+    data: { name: name?.trim(), description: description?.trim(), defaultPriorityId: parsedDefaultPriorityId }
   });
+  console.info('Updated ticket type', { id: parsedId });
   res.json(ticketType);
 }
 
 export async function deleteTicketType(req: Request, res: Response) {
   const parsedId = parseId(req.params.id);
-  if (!parsedId) return res.status(400).json({ message: 'Invalid ticket type id.' });
+  if (!parsedId) {
+    return res.status(400).json({ message: 'Invalid ticket type id.' });
+  }
+  const existing = await prisma.ticketType.findUnique({ where: { id: parsedId } });
+  if (!existing) {
+    return res.status(404).json({ message: 'Ticket type not found.' });
+  }
   await prisma.ticketType.delete({ where: { id: parsedId } });
+  console.info('Deleted ticket type', { id: parsedId });
   res.status(204).send();
 }

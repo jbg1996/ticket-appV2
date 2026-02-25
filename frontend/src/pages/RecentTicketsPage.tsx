@@ -9,8 +9,8 @@ type Ticket = {
   title: string;
   updatedAt: string;
   createdAt: string;
-  status: { code: string; label?: string | null };
-  priority: { code: string; label?: string | null };
+  status: { name: string };
+  priority: { name: string };
   assignedTo?: { firstName: string; lastName: string } | null;
 };
 
@@ -43,7 +43,7 @@ export function RecentTicketsPage() {
               >
                 <div>
                   <strong>{formatTicketDisplayName(ticket)}</strong>
-                  <div className="list__meta">Status: {ticketStatusLabel(ticket.status.label ?? ticket.status.code)} • Priority: {ticketPriorityLabel(ticket.priority.label ?? ticket.priority.code)}</div>
+                  <div className="list__meta">Status: {ticketStatusLabel(ticket.status.name)} • Priority: {ticketPriorityLabel(ticket.priority.name)}</div>
                   <div className="list__meta">
                     Updated {new Date(ticket.updatedAt).toLocaleString()} • Created {new Date(ticket.createdAt).toLocaleString()}
                   </div>
