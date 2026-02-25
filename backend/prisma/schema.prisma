@@ -40,8 +40,6 @@ model User {
 model TicketType {
   id                Int      @id @default(autoincrement())
   name              String
-  code              String   @unique
-  label             String
   description       String
   defaultPriorityId Int
   defaultPriority   Priority @relation(fields: [defaultPriorityId], references: [id])
@@ -52,8 +50,6 @@ model TicketType {
 model Priority {
   id      Int      @id @default(autoincrement())
   name    String
-  code    String   @unique
-  label   String
   color   String
   tickets Ticket[]
   types   TicketType[]
@@ -62,8 +58,6 @@ model Priority {
 model Status {
   id        Int      @id @default(autoincrement())
   name      String
-  code      String   @unique
-  label     String
   sortOrder Int
   color     String   @default("#9CA3AF")
   tickets   Ticket[]

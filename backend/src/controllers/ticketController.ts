@@ -9,9 +9,9 @@ import {
   normalizePriorityName,
   normalizeStatusName,
   normalizeTypeName,
-  statusTransitions,
-  canonicalTicketStatus,
-  canonicalTicketType
+  STATUS_TRANSITIONS,
+  TICKET_STATUS,
+  TICKET_TYPE
 } from '../constants/ticketCanon.js';
 import { buildTicketWhere, isTicketViewKey, isViewAllowedForRole } from '../constants/ticketViews.js';
 
@@ -188,8 +188,8 @@ export async function searchTickets(req: AuthRequest, res: Response) {
       id: ticket.id,
       title: ticket.title,
       code: ticket.code,
-      status: ticket.status.code,
-      priority: ticket.priority.code
+      status: ticket.status.name,
+      priority: ticket.priority.name
     }))
   );
 }
@@ -265,13 +265,13 @@ export async function createTicket(req: AuthRequest, res: Response) {
     where: { id: parsedTicketTypeId },
     include: { defaultPriority: true }
   });
-  const status = await prisma.status.findFirst({ where: { code: canonicalTicketStatus.new } });
+  const status = await prisma.status.findFirst({ where: { name: TICKET_STATUS.NEW } });
   if (!ticketType || !status) {
     return res.status(400).json({ message: 'Invalid ticket type or status.' });
   }
-  const title = ticketType.code === canonicalTicketType.other ? title2 : ticketType.label;
+  const title = ticketType.name === TICKET_TYPE.OTHER ? title2 : ticketType.name;
   if (!title) {
-    return res.status(400).json({ message: 'Custom title required for Other.' });
+    return res.status(400).json({ message: 'Custom title required for OTHER.' });
   }
   const usePriority = req.user.role === 'REQUESTER' ? ticketType.defaultPriorityId : (parsedPriorityId ?? ticketType.defaultPriorityId);
   const alreadyPrefixed = /^TM\d{9}\s-\s/i.test(title);
@@ -406,9 +406,9 @@ export async function changeStatus(req: AuthRequest, res: Response) {
   if (!status || !currentTicket) {
     return res.status(400).json({ message: 'Invalid status.' });
   }
-  const currentStatus = normalizeStatusName(currentTicket.status.code);
-  const nextStatus = normalizeStatusName(status.code);
-  const allowed = statusTransitions[currentStatus as keyof typeof statusTransitions] ?? [];
+  const currentStatus = normalizeStatusName(currentTicket.status.name);
+  const nextStatus = normalizeStatusName(status.name);
+  const allowed = STATUS_TRANSITIONS[currentStatus as keyof typeof STATUS_TRANSITIONS] ?? [];
   if (!allowed.includes(nextStatus)) {
     return res.status(400).json({ message: `Cannot move from ${currentStatus} to ${nextStatus}.` });
   }
@@ -416,7 +416,7 @@ export async function changeStatus(req: AuthRequest, res: Response) {
     where: { id: parsedId },
     data: {
       statusId: parsedStatusId,
-      resolvedAt: nextStatus === canonicalTicketStatus.resolved ? new Date() : undefined,
+      resolvedAt: nextStatus === TICKET_STATUS.RESOLVED ? new Date() : undefined,
       updatedById: req.user.id
     }
   });
@@ -445,7 +445,7 @@ export async function requestInfo(req: AuthRequest, res: Response) {
       requesterTechId: req.user.id,
       message,
       requestedFields: requestedFields ? JSON.stringify(requestedFields) : undefined,
-      status: 'open'
+      status: 'OPEN'
     }
   });
   await addHistory({
@@ -519,7 +519,7 @@ export async function deleteTicket(req: AuthRequest, res: Response) {
     if (req.user.role !== 'ADMIN') {
       const createdAt = ticket.createdAt.getTime();
       const now = Date.now();
-      const isNew = normalizeStatusName(ticket.status.code) === canonicalTicketStatus.new;
+      const isNew = normalizeStatusName(ticket.status.name) === TICKET_STATUS.NEW;
       if (!isNew || now - createdAt > ONE_DAY_MS) {
         return res.status(400).json({ message: 'Delete safeguard triggered. Only new tickets within 24h can be deleted.' });
       }
@@ -557,7 +557,7 @@ export async function deleteTicketsBulk(req: AuthRequest, res: Response) {
     const now = Date.now();
     const blockedIds = tickets
       .filter((ticket) => {
-        const isNew = ticket.status?.code ? normalizeStatusName(ticket.status.code) === canonicalTicketStatus.new : false;
+        const isNew = ticket.status?.name ? normalizeStatusName(ticket.status.name) === TICKET_STATUS.NEW : false;
         return !isNew || now - ticket.createdAt.getTime() > ONE_DAY_MS;
       })
       .map((ticket) => ticket.id);

@@ -16,9 +16,9 @@ type Ticket = {
   title: string;
   createdAt: string;
   updatedAt: string;
-  status: { id: number; code: string; label?: string | null; color?: string | null };
-  priority: { id: number; code: string; label?: string | null };
-  ticketType: { id: number; code: string; label?: string | null; description: string; defaultPriorityId: number };
+  status: { id: number; name: string; color?: string | null };
+  priority: { id: number; name: string };
+  ticketType: { id: number; name: string; description: string; defaultPriorityId: number };
   createdBy?: { id: number; firstName: string; lastName: string } | null;
   assignedTo?: { id: number; firstName: string; lastName: string } | null;
 };
@@ -120,9 +120,9 @@ export function TicketsPage() {
   const columnDefinitions: ColumnDefinition[] = useMemo(
     () => [
       { id: 'title', label: 'Title', accessor: (ticket) => formatTicketDisplayName(ticket) },
-      { id: 'status', label: 'Status', accessor: (ticket) => ticketStatusLabel(ticket.status?.label ?? ticket.status?.code ?? '') },
-      { id: 'priority', label: 'Priority', accessor: (ticket) => ticketPriorityLabel(ticket.priority?.label ?? ticket.priority?.code ?? '') },
-      { id: 'type', label: 'Type', accessor: (ticket) => ticketTypeLabel(ticket.ticketType?.label ?? ticket.ticketType?.code ?? '') },
+      { id: 'status', label: 'Status', accessor: (ticket) => ticketStatusLabel(ticket.status?.name ?? '') },
+      { id: 'priority', label: 'Priority', accessor: (ticket) => ticketPriorityLabel(ticket.priority?.name ?? '') },
+      { id: 'type', label: 'Type', accessor: (ticket) => ticketTypeLabel(ticket.ticketType?.name ?? '') },
       { id: 'createdAt', label: 'Created At', accessor: (ticket) => ticket.createdAt, isDate: true },
       { id: 'updatedAt', label: 'Updated At', accessor: (ticket) => ticket.updatedAt, isDate: true },
       {
@@ -506,9 +506,9 @@ export function TicketsPage() {
                 <td>
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
-                <td>{ticketStatusLabel(ticket.status.label ?? ticket.status.code)}</td>
-                <td>{ticketPriorityLabel(ticket.priority.label ?? ticket.priority.code)}</td>
-                <td>{ticketTypeLabel(ticket.ticketType.label ?? ticket.ticketType.code)}</td>
+                <td>{ticketStatusLabel(ticket.status.name)}</td>
+                <td>{ticketPriorityLabel(ticket.priority.name)}</td>
+                <td>{ticketTypeLabel(ticket.ticketType.name)}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
                 <td>{formatDate(ticket.updatedAt)}</td>
                 <td>{ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : '—'}</td>
