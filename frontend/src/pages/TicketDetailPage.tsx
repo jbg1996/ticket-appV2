@@ -5,7 +5,7 @@ import { apiFetch, apiFetchBlob, apiUpload } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../utils/ticketLabels';
+import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../constants/ticketLabels';
 
 type Ticket = {
   id: number;

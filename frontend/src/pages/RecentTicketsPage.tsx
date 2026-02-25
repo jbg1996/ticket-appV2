@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
-import { ticketPriorityLabel, ticketStatusLabel } from '../utils/ticketLabels';
+import { ticketPriorityLabel, ticketStatusLabel } from '../constants/ticketLabels';
 
 type Ticket = {
   id: number;

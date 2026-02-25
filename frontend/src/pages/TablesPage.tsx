@@ -13,7 +13,7 @@ import {
   updateStatus,
   updateTicketType
 } from '../services/api';
-import { ticketPriorityLabel } from '../utils/ticketLabels';
+import { ticketPriorityLabel } from '../constants/ticketLabels';
 type TicketType = { id: number; name: string; description: string; defaultPriorityId: number; defaultPriority?: { name: string } };
 type Priority = { id: number; name: string; color: string };
 type Status = { id: number; name: string; sortOrder: number; color?: string | null };
