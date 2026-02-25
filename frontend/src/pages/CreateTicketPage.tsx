@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
 import { useAuth } from '../components/AuthProvider';
-import { ticketPriorityLabel, ticketTypeLabel } from '../utils/ticketLabels';
+import { ticketPriorityLabel, ticketTypeLabel } from '../constants/ticketLabels';
 
 type TicketType = {
   id: number;

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
-import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../utils/ticketLabels';
+import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../constants/ticketLabels';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
@@ -100,9 +100,9 @@ export function TicketsPage() {
   const columnDefinitions: ColumnDefinition[] = useMemo(
     () => [
       { id: 'title', label: 'Title', accessor: (ticket) => formatTicketDisplayName(ticket) },
-      { id: 'status', label: 'Status', accessor: (ticket) => ticket.status?.name },
-      { id: 'priority', label: 'Priority', accessor: (ticket) => ticket.priority?.name },
-      { id: 'type', label: 'Type', accessor: (ticket) => ticket.ticketType?.name },
+      { id: 'status', label: 'Status', accessor: (ticket) => ticketStatusLabel(ticket.status?.name ?? '') },
+      { id: 'priority', label: 'Priority', accessor: (ticket) => ticketPriorityLabel(ticket.priority?.name ?? '') },
+      { id: 'type', label: 'Type', accessor: (ticket) => ticketTypeLabel(ticket.ticketType?.name ?? '') },
       { id: 'createdAt', label: 'Created At', accessor: (ticket) => ticket.createdAt, isDate: true },
       { id: 'updatedAt', label: 'Updated At', accessor: (ticket) => ticket.updatedAt, isDate: true },
       {
