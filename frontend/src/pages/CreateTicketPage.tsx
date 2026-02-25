@@ -43,7 +43,7 @@ export function CreateTicketPage() {
   const selectedTypeData = ticketTypes.find((type) => type.id === selectedType);
   const title = selectedTypeData?.name ?? '';
 
-  const isCustomTitle = useMemo(() => selectedTypeData?.name === 'OTHER', [selectedTypeData]);
+  const isCustomTitle = useMemo(() => selectedTypeData?.name === 'other', [selectedTypeData]);
 
   const handleCreate = async () => {
     if (!selectedType) return;

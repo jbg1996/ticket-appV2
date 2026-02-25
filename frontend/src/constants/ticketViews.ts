@@ -1,70 +1,70 @@
 import type { User } from '../components/AuthProvider';
 
-export const TICKET_VIEW_KEY = {
-  ALL_TICKETS: 'ALL_TICKETS',
-  CREATED_BY_ME: 'CREATED_BY_ME',
-  ASSIGNED_TO_ME: 'ASSIGNED_TO_ME',
-  RESOLVED_RELATED_ACTIVE: 'RESOLVED_RELATED_ACTIVE',
-  UNASSIGNED_OPEN: 'UNASSIGNED_OPEN',
-  RESOLVED_CREATED_BY_ME: 'RESOLVED_CREATED_BY_ME'
+export const ticketViewKey = {
+  allTickets: 'ALL_TICKETS',
+  createdByMe: 'CREATED_BY_ME',
+  assignedToMe: 'ASSIGNED_TO_ME',
+  resolvedRelatedActive: 'RESOLVED_RELATED_ACTIVE',
+  unassignedOpen: 'UNASSIGNED_OPEN',
+  resolvedCreatedByMe: 'RESOLVED_CREATED_BY_ME'
 } as const;
 
-export type TicketViewKey = (typeof TICKET_VIEW_KEY)[keyof typeof TICKET_VIEW_KEY];
-export type UserRole = User['role'];
+export type ticketViewKeyName = (typeof ticketViewKey)[keyof typeof ticketViewKey];
+export type userRole = User['role'];
 
-export type TicketViewDefinition = {
-  key: TicketViewKey;
+export type ticketViewDefinition = {
+  key: ticketViewKeyName;
   label: string;
   description: string;
-  rolesAllowed: UserRole[];
+  rolesAllowed: userRole[];
 };
 
-export const TICKET_VIEWS: TicketViewDefinition[] = [
+export const ticketViews: ticketViewDefinition[] = [
   {
-    key: TICKET_VIEW_KEY.ALL_TICKETS,
+    key: ticketViewKey.allTickets,
     label: 'All Tickets',
     description: 'Shows all tickets regardless of status.',
     rolesAllowed: ['ADMIN']
   },
   {
-    key: TICKET_VIEW_KEY.CREATED_BY_ME,
+    key: ticketViewKey.createdByMe,
     label: 'Tickets Created by Me',
     description: 'Shows tickets created by the current user.',
     rolesAllowed: ['ADMIN', 'TECH', 'REQUESTER']
   },
   {
-    key: TICKET_VIEW_KEY.ASSIGNED_TO_ME,
+    key: ticketViewKey.assignedToMe,
     label: 'Tickets Assigned to Me',
     description: 'Shows tickets assigned to the current user.',
     rolesAllowed: ['ADMIN', 'TECH']
   },
   {
-    key: TICKET_VIEW_KEY.RESOLVED_RELATED_ACTIVE,
+    key: ticketViewKey.resolvedRelatedActive,
     label: 'Resolved Tickets (Active & Related to Me)',
     description: 'Shows active resolved tickets created by or assigned to the current user.',
     rolesAllowed: ['ADMIN', 'TECH']
   },
   {
-    key: TICKET_VIEW_KEY.UNASSIGNED_OPEN,
+    key: ticketViewKey.unassignedOpen,
     label: 'Unassigned Open Tickets',
     description: 'Shows non-resolved tickets that are unassigned.',
     rolesAllowed: ['ADMIN', 'TECH']
   },
   {
-    key: TICKET_VIEW_KEY.RESOLVED_CREATED_BY_ME,
+    key: ticketViewKey.resolvedCreatedByMe,
     label: 'Resolved Tickets Created by Me',
     description: 'Shows resolved tickets created by the current user.',
     rolesAllowed: ['REQUESTER']
   }
 ];
 
-export const getAllowedTicketViews = (role: UserRole | undefined) => {
+export const getAllowedTicketViews = (role: userRole | undefined) => {
   if (!role) return [];
-  return TICKET_VIEWS.filter((view) => view.rolesAllowed.includes(role));
+  return ticketViews.filter((view) => view.rolesAllowed.includes(role));
 };
 
-export const DEFAULT_TICKET_VIEW_BY_ROLE: Record<UserRole, TicketViewKey> = {
-  ADMIN: TICKET_VIEW_KEY.ALL_TICKETS,
-  TECH: TICKET_VIEW_KEY.ASSIGNED_TO_ME,
-  REQUESTER: TICKET_VIEW_KEY.CREATED_BY_ME
+export const defaultTicketViewByRole: Record<userRole, ticketViewKeyName> = {
+  ADMIN: ticketViewKey.allTickets,
+  TECH: ticketViewKey.assignedToMe,
+  REQUESTER: ticketViewKey.createdByMe
 };

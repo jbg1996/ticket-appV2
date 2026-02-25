@@ -9,7 +9,7 @@ const dashboardQuerySchema = z.object({
   granularity: z.enum(['day', 'week']).optional()
 });
 
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const dayInMs = 24 * 60 * 60 * 1000;
 
 const errorResponse = (res: Response, status: number, message: string, code: string) =>
   res.status(status).json({
@@ -29,7 +29,7 @@ export async function getDashboardSummaryHandler(req: AuthRequest, res: Response
 
   const now = new Date();
   const end = parsed.data.end ? new Date(parsed.data.end) : now;
-  const start = parsed.data.start ? new Date(parsed.data.start) : new Date(end.getTime() - 30 * DAY_IN_MS);
+  const start = parsed.data.start ? new Date(parsed.data.start) : new Date(end.getTime() - 30 * dayInMs);
   const granularity = parsed.data.granularity ?? 'day';
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {

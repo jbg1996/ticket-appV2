@@ -24,7 +24,7 @@ type WorkloadRow = {
   _count: { _all: number };
 };
 
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const dayInMs = 24 * 60 * 60 * 1000;
 
 const toNumber = (value: number | bigint | null | undefined) => {
   if (value === null || value === undefined) {
@@ -65,7 +65,7 @@ const toUtcMidnight = (value: Date) => new Date(Date.UTC(value.getUTCFullYear(),
 const startOfUtcWeek = (value: Date) => {
   const day = value.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  return new Date(value.getTime() + diff * DAY_IN_MS);
+  return new Date(value.getTime() + diff * dayInMs);
 };
 
 export const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGranularity) => {
@@ -76,7 +76,7 @@ export const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGran
     const limit = toUtcMidnight(end);
     while (cursor.getTime() <= limit.getTime()) {
       grid.push(cursor.toISOString().slice(0, 10));
-      cursor = new Date(cursor.getTime() + DAY_IN_MS);
+      cursor = new Date(cursor.getTime() + dayInMs);
     }
     return grid;
   }
@@ -85,7 +85,7 @@ export const buildTimeGrid = (start: Date, end: Date, granularity: DashboardGran
   const limit = toUtcMidnight(end);
   while (cursor.getTime() <= limit.getTime()) {
     grid.push(cursor.toISOString().slice(0, 10));
-    cursor = new Date(cursor.getTime() + 7 * DAY_IN_MS);
+    cursor = new Date(cursor.getTime() + 7 * dayInMs);
   }
   return grid;
 };
@@ -207,7 +207,7 @@ export async function getDashboardSummary(filters: DashboardFilters) {
 
   for (const ticket of openTickets) {
     const diffMs = now.getTime() - ticket.createdAt.getTime();
-    const daysOpen = Math.floor(diffMs / DAY_IN_MS);
+    const daysOpen = Math.floor(diffMs / dayInMs);
     if (daysOpen <= 2) {
       backlogAgingCounters['0-2'] += 1;
     } else if (daysOpen <= 7) {
