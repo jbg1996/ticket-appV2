@@ -124,7 +124,7 @@ export function DashboardPage() {
     () =>
       data.statusDistribution.map((point) => ({
         ...point,
-        statusDisplayName: ticketStatusLabel(point.statusName)
+        statusDisplayName: ticketStatusLabel(point.statusLabel ?? point.statusName)
       })),
     [data.statusDistribution]
   );

@@ -26,13 +26,15 @@ beforeAll(async () => {
   });
   userId = user.id;
 
-  const priority = await prisma.priority.create({ data: { name: 'MEDIUM', color: '#2563eb' } });
+  const priority = await prisma.priority.create({ data: { name: 'medium', code: 'medium', label: 'Medium', color: '#2563eb' } });
   priorityId = priority.id;
-  const status = await prisma.status.create({ data: { name: 'NEW', sortOrder: 1 } });
+  const status = await prisma.status.create({ data: { name: 'new', code: 'new', label: 'New', sortOrder: 1 } });
   statusId = status.id;
   const ticketType = await prisma.ticketType.create({
     data: {
-      name: 'REQUEST',
+      name: 'request',
+      code: 'request',
+      label: 'Request',
       description: 'Template',
       defaultPriorityId: priorityId,
       isActive: true

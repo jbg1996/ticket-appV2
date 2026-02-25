@@ -166,7 +166,7 @@ export async function getDashboardSummary(filters: DashboardFilters) {
   const statuses = statusIds.length
     ? await prisma.status.findMany({
         where: { id: { in: statusIds } },
-        select: { id: true, name: true, color: true }
+        select: { id: true, code: true, label: true, color: true }
       })
     : [];
 
@@ -180,12 +180,13 @@ export async function getDashboardSummary(filters: DashboardFilters) {
       }
       return {
         statusId: item.statusId,
-        statusName: status.name,
+        statusName: status.code,
+        statusLabel: status.label,
         color: status.color,
         count: item._count._all
       };
     })
-    .filter((item): item is { statusId: number; statusName: string; color: string; count: number } => Boolean(item));
+    .filter((item): item is { statusId: number; statusName: string; statusLabel: string; color: string; count: number } => Boolean(item));
 
   const openTickets = await prisma.ticket.findMany({
     where: {

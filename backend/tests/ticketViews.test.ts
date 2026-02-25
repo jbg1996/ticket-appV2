@@ -5,7 +5,7 @@ import {
   isTicketViewKey,
   isViewAllowedForRole
 } from '../src/constants/ticketViews.js';
-import { TICKET_STATUS } from '../src/constants/ticketCanon.js';
+import { canonicalTicketStatus } from '../src/constants/ticketCanon.js';
 
 describe('ticket view definitions', () => {
   it('validates known view keys', () => {
@@ -23,7 +23,7 @@ describe('ticket view definitions', () => {
     const where = buildTicketWhere(TICKET_VIEW_KEY.RESOLVED_RELATED_ACTIVE, { id: 77, role: 'TECH' });
     expect(where).toEqual({
       isActive: true,
-      status: { name: TICKET_STATUS.RESOLVED },
+      status: { code: canonicalTicketStatus.resolved },
       OR: [{ createdById: 77 }, { assignedToId: 77 }]
     });
   });
@@ -32,7 +32,7 @@ describe('ticket view definitions', () => {
     const where = buildTicketWhere(TICKET_VIEW_KEY.UNASSIGNED_OPEN, { id: 77, role: 'TECH' });
     expect(where).toEqual({
       assignedToId: null,
-      status: { name: { not: TICKET_STATUS.RESOLVED } }
+      status: { code: { not: canonicalTicketStatus.resolved } }
     });
   });
 });

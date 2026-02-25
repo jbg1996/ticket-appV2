@@ -1,30 +1,30 @@
-import { titleCase } from '../utils/titleCase';
+import { formatLabel } from '../utils/formatLabel';
 
 export const statusLabel: Record<string, string> = {
-  NEW: 'New',
-  IN_PROGRESS: 'In Progress',
-  ON_HOLD: 'On Hold',
-  RESOLVED: 'Resolved',
-  CLOSED: 'Closed'
+  new: 'New',
+  inProgress: 'In Progress',
+  onHold: 'On Hold',
+  resolved: 'Resolved',
+  closed: 'Closed'
 };
 
 export const priorityLabel: Record<string, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
-  CRITICAL: 'Critical'
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical'
 };
 
 export const typeLabel: Record<string, string> = {
-  REQUEST: 'Request',
-  INCIDENT: 'Incident',
-  ACCESS: 'Access',
-  HARDWARE: 'Hardware',
-  SOFTWARE: 'Software',
-  OTHER: 'Other'
+  request: 'Request',
+  incident: 'Incident',
+  access: 'Access',
+  hardware: 'Hardware',
+  software: 'Software',
+  other: 'Other'
 };
 
-const formatWithFallback = (labels: Record<string, string>, value: string) => labels[value] ?? titleCase(value);
+const formatWithFallback = (labels: Record<string, string>, value: string) => labels[value] ?? formatLabel(value);
 
 export const ticketStatusLabel = (value: string) => formatWithFallback(statusLabel, value);
 export const ticketPriorityLabel = (value: string) => formatWithFallback(priorityLabel, value);
