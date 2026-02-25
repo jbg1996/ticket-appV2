@@ -1,92 +1,92 @@
 import { Prisma } from '@prisma/client';
-import { TICKET_STATUS } from './ticketCanon.js';
+import { ticketStatus, toDbStatusName } from './ticketCanon.js';
 
-export const TICKET_VIEW_KEY = {
-  ALL_TICKETS: 'ALL_TICKETS',
-  CREATED_BY_ME: 'CREATED_BY_ME',
-  ASSIGNED_TO_ME: 'ASSIGNED_TO_ME',
-  RESOLVED_RELATED_ACTIVE: 'RESOLVED_RELATED_ACTIVE',
-  UNASSIGNED_OPEN: 'UNASSIGNED_OPEN',
-  RESOLVED_CREATED_BY_ME: 'RESOLVED_CREATED_BY_ME'
+export const ticketViewKey = {
+  allTickets: 'ALL_TICKETS',
+  createdByMe: 'CREATED_BY_ME',
+  assignedToMe: 'ASSIGNED_TO_ME',
+  resolvedRelatedActive: 'RESOLVED_RELATED_ACTIVE',
+  unassignedOpen: 'UNASSIGNED_OPEN',
+  resolvedCreatedByMe: 'RESOLVED_CREATED_BY_ME'
 } as const;
 
-export type TicketViewKey = (typeof TICKET_VIEW_KEY)[keyof typeof TICKET_VIEW_KEY];
-export type TicketViewRole = 'ADMIN' | 'TECH' | 'REQUESTER';
+export type ticketViewKeyName = (typeof ticketViewKey)[keyof typeof ticketViewKey];
+export type ticketViewRole = 'ADMIN' | 'TECH' | 'REQUESTER';
 
-export type CurrentTicketUser = {
+export type currentTicketUser = {
   id: number;
   role: string;
 };
 
-export const TICKET_VIEW_DEFINITIONS: Record<
-  TicketViewKey,
+export const ticketViewDefinitions: Record<
+  ticketViewKeyName,
   {
     label: string;
     description: string;
-    rolesAllowed: TicketViewRole[];
+    rolesAllowed: ticketViewRole[];
   }
 > = {
-  [TICKET_VIEW_KEY.ALL_TICKETS]: {
+  [ticketViewKey.allTickets]: {
     label: 'All Tickets',
     description: 'Shows all tickets regardless of status.',
     rolesAllowed: ['ADMIN']
   },
-  [TICKET_VIEW_KEY.CREATED_BY_ME]: {
+  [ticketViewKey.createdByMe]: {
     label: 'Tickets Created by Me',
     description: 'Shows tickets created by the current user.',
     rolesAllowed: ['ADMIN', 'TECH', 'REQUESTER']
   },
-  [TICKET_VIEW_KEY.ASSIGNED_TO_ME]: {
+  [ticketViewKey.assignedToMe]: {
     label: 'Tickets Assigned to Me',
     description: 'Shows tickets assigned to the current user.',
     rolesAllowed: ['ADMIN', 'TECH']
   },
-  [TICKET_VIEW_KEY.RESOLVED_RELATED_ACTIVE]: {
+  [ticketViewKey.resolvedRelatedActive]: {
     label: 'Resolved Tickets (Active & Related to Me)',
     description: 'Shows active resolved tickets created by or assigned to the current user.',
     rolesAllowed: ['ADMIN', 'TECH']
   },
-  [TICKET_VIEW_KEY.UNASSIGNED_OPEN]: {
+  [ticketViewKey.unassignedOpen]: {
     label: 'Unassigned Open Tickets',
     description: 'Shows non-resolved tickets that are unassigned.',
     rolesAllowed: ['ADMIN', 'TECH']
   },
-  [TICKET_VIEW_KEY.RESOLVED_CREATED_BY_ME]: {
+  [ticketViewKey.resolvedCreatedByMe]: {
     label: 'Resolved Tickets Created by Me',
     description: 'Shows resolved tickets created by the current user.',
     rolesAllowed: ['REQUESTER']
   }
 };
 
-export const isTicketViewKey = (value: string): value is TicketViewKey =>
-  Object.values(TICKET_VIEW_KEY).includes(value as TicketViewKey);
+export const isTicketViewKey = (value: string): value is ticketViewKeyName =>
+  Object.values(ticketViewKey).includes(value as ticketViewKeyName);
 
-export const isViewAllowedForRole = (viewKey: TicketViewKey, role: string) =>
-  TICKET_VIEW_DEFINITIONS[viewKey].rolesAllowed.includes(role as TicketViewRole);
+export const isViewAllowedForRole = (viewKeyName: ticketViewKeyName, role: string) =>
+  ticketViewDefinitions[viewKeyName].rolesAllowed.includes(role as ticketViewRole);
 
-export function buildTicketWhere(viewKey: TicketViewKey, currentUser: CurrentTicketUser): Prisma.TicketWhereInput {
-  switch (viewKey) {
-    case TICKET_VIEW_KEY.ALL_TICKETS:
+export function buildTicketWhere(viewKeyName: ticketViewKeyName, currentUser: currentTicketUser): Prisma.TicketWhereInput {
+  switch (viewKeyName) {
+    case ticketViewKey.allTickets:
       return {};
-    case TICKET_VIEW_KEY.CREATED_BY_ME:
+    case ticketViewKey.createdByMe:
       return { createdById: currentUser.id };
-    case TICKET_VIEW_KEY.ASSIGNED_TO_ME:
+    case ticketViewKey.assignedToMe:
       return { assignedToId: currentUser.id };
-    case TICKET_VIEW_KEY.RESOLVED_RELATED_ACTIVE:
+    case ticketViewKey.resolvedRelatedActive:
       return {
         isActive: true,
-        status: { name: TICKET_STATUS.RESOLVED },
+        status: { name: toDbStatusName(ticketStatus.resolved) },
         OR: [{ createdById: currentUser.id }, { assignedToId: currentUser.id }]
       };
-    case TICKET_VIEW_KEY.UNASSIGNED_OPEN:
+    case ticketViewKey.unassignedOpen:
       return {
         assignedToId: null,
-        status: { name: { not: TICKET_STATUS.RESOLVED } }
+        status: { name: { not: toDbStatusName(ticketStatus.resolved) } }
       };
-    case TICKET_VIEW_KEY.RESOLVED_CREATED_BY_ME:
+    case ticketViewKey.resolvedCreatedByMe:
       return {
         createdById: currentUser.id,
-        status: { name: TICKET_STATUS.RESOLVED }
+        status: { name: toDbStatusName(ticketStatus.resolved) }
       };
     default:
       return {};

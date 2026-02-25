@@ -9,13 +9,19 @@ import {
   normalizePriorityName,
   normalizeStatusName,
   normalizeTypeName,
-  STATUS_TRANSITIONS,
-  TICKET_STATUS,
-  TICKET_TYPE
+  statusTransitions,
+  ticketStatus,
+  ticketType,
+  toAppPriorityName,
+  toAppStatusName,
+  toAppTypeName,
+  toDbPriorityName,
+  toDbStatusName,
+  toDbTypeName
 } from '../constants/ticketCanon.js';
 import { buildTicketWhere, isTicketViewKey, isViewAllowedForRole } from '../constants/ticketViews.js';
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const oneDayMs = 24 * 60 * 60 * 1000;
 
 export async function listTickets(req: AuthRequest, res: Response) {
   const {
@@ -86,13 +92,13 @@ export async function listTickets(req: AuthRequest, res: Response) {
 
   const filters: Record<string, ColumnFilterInput> = {};
   if (status) {
-    filters.status = { kind: 'text', op: 'Equals', value: normalizeStatusName(status) };
+    filters.status = { kind: 'text', op: 'Equals', value: toDbStatusName(normalizeStatusName(status)) };
   }
   if (priority) {
-    filters.priority = { kind: 'text', op: 'Equals', value: normalizePriorityName(priority) };
+    filters.priority = { kind: 'text', op: 'Equals', value: toDbPriorityName(normalizePriorityName(priority)) };
   }
   if (type) {
-    filters.type = { kind: 'text', op: 'Equals', value: normalizeTypeName(type) };
+    filters.type = { kind: 'text', op: 'Equals', value: toDbTypeName(normalizeTypeName(type)) };
   }
 
   const createdAtFilter: Record<string, Date> = {};
@@ -154,7 +160,11 @@ export async function listTickets(req: AuthRequest, res: Response) {
     take: pageSizeNumber
   });
   res.json({
-    data: tickets,
+    data: tickets.map((ticket) => ({
+      ...ticket,
+      status: ticket.status ? { ...ticket.status, name: toAppStatusName(ticket.status.name) } : ticket.status,
+      priority: ticket.priority ? { ...ticket.priority, name: toAppPriorityName(ticket.priority.name) } : ticket.priority
+    })),
     page: pageNumber,
     pageSize: pageSizeNumber,
     total,
@@ -188,8 +198,8 @@ export async function searchTickets(req: AuthRequest, res: Response) {
       id: ticket.id,
       title: ticket.title,
       code: ticket.code,
-      status: ticket.status.name,
-      priority: ticket.priority.name
+      status: toAppStatusName(ticket.status.name),
+      priority: toAppPriorityName(ticket.priority.name)
     }))
   );
 }
@@ -216,7 +226,13 @@ export async function listRecentTickets(req: AuthRequest, res: Response) {
     }
   });
 
-  res.json(tickets);
+  res.json(
+    tickets.map((ticket) => ({
+      ...ticket,
+      status: ticket.status ? { ...ticket.status, name: toAppStatusName(ticket.status.name) } : ticket.status,
+      priority: ticket.priority ? { ...ticket.priority, name: toAppPriorityName(ticket.priority.name) } : ticket.priority
+    }))
+  );
 }
 
 export async function getTicket(req: Request, res: Response) {
@@ -240,7 +256,12 @@ export async function getTicket(req: Request, res: Response) {
   if (!ticket) {
     return res.status(404).json({ message: 'Ticket not found.' });
   }
-  res.json(ticket);
+  res.json({
+    ...ticket,
+    status: ticket.status ? { ...ticket.status, name: toAppStatusName(ticket.status.name) } : ticket.status,
+    priority: ticket.priority ? { ...ticket.priority, name: toAppPriorityName(ticket.priority.name) } : ticket.priority,
+    ticketType: ticket.ticketType ? { ...ticket.ticketType, name: toAppTypeName(ticket.ticketType.name) } : ticket.ticketType
+  });
 }
 
 export async function createTicket(req: AuthRequest, res: Response) {
@@ -261,19 +282,19 @@ export async function createTicket(req: AuthRequest, res: Response) {
   if (priorityId && !parsedPriorityId) {
     return res.status(400).json({ message: 'Invalid priority id.' });
   }
-  const ticketType = await prisma.ticketType.findUnique({
+  const ticketTypeRecord = await prisma.ticketType.findUnique({
     where: { id: parsedTicketTypeId },
     include: { defaultPriority: true }
   });
-  const status = await prisma.status.findFirst({ where: { name: TICKET_STATUS.NEW } });
-  if (!ticketType || !status) {
+  const status = await prisma.status.findFirst({ where: { name: toDbStatusName(ticketStatus.new) } });
+  if (!ticketTypeRecord || !status) {
     return res.status(400).json({ message: 'Invalid ticket type or status.' });
   }
-  const title = ticketType.name === TICKET_TYPE.OTHER ? title2 : ticketType.name;
+  const title = ticketTypeRecord.name === toDbTypeName(ticketType.other) ? title2 : ticketTypeRecord.name;
   if (!title) {
-    return res.status(400).json({ message: 'Custom title required for OTHER.' });
+    return res.status(400).json({ message: 'Custom title required for other.' });
   }
-  const usePriority = req.user.role === 'REQUESTER' ? ticketType.defaultPriorityId : (parsedPriorityId ?? ticketType.defaultPriorityId);
+  const usePriority = req.user.role === 'REQUESTER' ? ticketTypeRecord.defaultPriorityId : (parsedPriorityId ?? ticketTypeRecord.defaultPriorityId);
   const alreadyPrefixed = /^TM\d{9}\s-\s/i.test(title);
 
   const ticket = await prisma.$transaction(async (tx) => {
@@ -408,7 +429,7 @@ export async function changeStatus(req: AuthRequest, res: Response) {
   }
   const currentStatus = normalizeStatusName(currentTicket.status.name);
   const nextStatus = normalizeStatusName(status.name);
-  const allowed = STATUS_TRANSITIONS[currentStatus as keyof typeof STATUS_TRANSITIONS] ?? [];
+  const allowed = statusTransitions[currentStatus as keyof typeof statusTransitions] ?? [];
   if (!allowed.includes(nextStatus)) {
     return res.status(400).json({ message: `Cannot move from ${currentStatus} to ${nextStatus}.` });
   }
@@ -416,7 +437,7 @@ export async function changeStatus(req: AuthRequest, res: Response) {
     where: { id: parsedId },
     data: {
       statusId: parsedStatusId,
-      resolvedAt: nextStatus === TICKET_STATUS.RESOLVED ? new Date() : undefined,
+      resolvedAt: toDbStatusName(nextStatus) === toDbStatusName(ticketStatus.resolved) ? new Date() : undefined,
       updatedById: req.user.id
     }
   });
@@ -519,8 +540,8 @@ export async function deleteTicket(req: AuthRequest, res: Response) {
     if (req.user.role !== 'ADMIN') {
       const createdAt = ticket.createdAt.getTime();
       const now = Date.now();
-      const isNew = normalizeStatusName(ticket.status.name) === TICKET_STATUS.NEW;
-      if (!isNew || now - createdAt > ONE_DAY_MS) {
+      const isNew = normalizeStatusName(ticket.status.name) === ticketStatus.new;
+      if (!isNew || now - createdAt > oneDayMs) {
         return res.status(400).json({ message: 'Delete safeguard triggered. Only new tickets within 24h can be deleted.' });
       }
     }
@@ -557,8 +578,8 @@ export async function deleteTicketsBulk(req: AuthRequest, res: Response) {
     const now = Date.now();
     const blockedIds = tickets
       .filter((ticket) => {
-        const isNew = ticket.status?.name ? normalizeStatusName(ticket.status.name) === TICKET_STATUS.NEW : false;
-        return !isNew || now - ticket.createdAt.getTime() > ONE_DAY_MS;
+        const isNew = ticket.status?.name ? normalizeStatusName(ticket.status.name) === ticketStatus.new : false;
+        return !isNew || now - ticket.createdAt.getTime() > oneDayMs;
       })
       .map((ticket) => ticket.id);
     if (blockedIds.length > 0) {

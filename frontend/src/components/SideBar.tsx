@@ -4,7 +4,7 @@ import { LayoutDashboard } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { ReportIcon } from './icons/ReportIcon';
 
-const SIDEBAR_STORAGE_KEY = 'sidebarCollapsed';
+const sidebarStorageKey = 'sidebarCollapsed';
 
 const iconProps = {
   width: 20,
@@ -70,7 +70,7 @@ const icons = {
 };
 
 function getInitialCollapsed() {
-  const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+  const stored = localStorage.getItem(sidebarStorageKey);
   if (stored !== null) {
     return stored === 'true';
   }
@@ -82,7 +82,7 @@ export function SideBar() {
   const [collapsed, setCollapsed] = useState(getInitialCollapsed);
 
   useEffect(() => {
-    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed));
+    localStorage.setItem(sidebarStorageKey, String(collapsed));
   }, [collapsed]);
 
   const isAdmin = user?.role === 'ADMIN';

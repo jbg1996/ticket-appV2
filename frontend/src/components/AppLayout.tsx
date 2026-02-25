@@ -4,12 +4,12 @@ import { SideBar } from './SideBar';
 import { TopBar } from './TopBar';
 import { getSidebarTheme } from '../utils/color';
 
-const HEADER_COLOR_STORAGE_KEY = 'headerColor';
-const SIDEBAR_COLOR_STORAGE_KEY = 'sidebarColor';
-const APP_LOGO_STORAGE_KEY = 'appLogoUrl';
-const COMPANY_LOGO_STORAGE_KEY = 'companyLogoUrl';
-const DEFAULT_HEADER_COLOR = '#1f2937';
-const DEFAULT_SIDEBAR_COLOR = '#0f172a';
+const headerColorStorageKey = 'headerColor';
+const sidebarColorStorageKey = 'sidebarColor';
+const appLogoStorageKey = 'appLogoUrl';
+const companyLogoStorageKey = 'companyLogoUrl';
+const defaultHeaderColor = '#1f2937';
+const defaultSidebarColor = '#0f172a';
 
 export type LayoutContextValue = {
   appLogoUrl: string | null;
@@ -36,52 +36,52 @@ export function AppLayout({
   initialHeaderColor?: string;
   initialSidebarColor?: string;
 }) {
-  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(() => getStoredValue(APP_LOGO_STORAGE_KEY));
-  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(() => getStoredValue(COMPANY_LOGO_STORAGE_KEY));
-  const [headerColor, setHeaderColor] = useState(() => getStoredValue(HEADER_COLOR_STORAGE_KEY) ?? initialHeaderColor ?? DEFAULT_HEADER_COLOR);
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(() => getStoredValue(appLogoStorageKey));
+  const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(() => getStoredValue(companyLogoStorageKey));
+  const [headerColor, setHeaderColor] = useState(() => getStoredValue(headerColorStorageKey) ?? initialHeaderColor ?? defaultHeaderColor);
   const [sidebarColor, setSidebarColor] = useState(
-    () => getStoredValue(SIDEBAR_COLOR_STORAGE_KEY) ?? initialSidebarColor ?? initialHeaderColor ?? DEFAULT_SIDEBAR_COLOR
+    () => getStoredValue(sidebarColorStorageKey) ?? initialSidebarColor ?? initialHeaderColor ?? defaultSidebarColor
   );
 
   useEffect(() => {
-    if (initialHeaderColor && !getStoredValue(HEADER_COLOR_STORAGE_KEY)) {
+    if (initialHeaderColor && !getStoredValue(headerColorStorageKey)) {
       setHeaderColor(initialHeaderColor);
     }
   }, [initialHeaderColor]);
 
   useEffect(() => {
-    if (initialSidebarColor && !getStoredValue(SIDEBAR_COLOR_STORAGE_KEY)) {
+    if (initialSidebarColor && !getStoredValue(sidebarColorStorageKey)) {
       setSidebarColor(initialSidebarColor);
       return;
     }
 
-    if (!initialSidebarColor && initialHeaderColor && !getStoredValue(SIDEBAR_COLOR_STORAGE_KEY)) {
+    if (!initialSidebarColor && initialHeaderColor && !getStoredValue(sidebarColorStorageKey)) {
       setSidebarColor(initialHeaderColor);
     }
   }, [initialHeaderColor, initialSidebarColor]);
 
   useEffect(() => {
-    localStorage.setItem(HEADER_COLOR_STORAGE_KEY, headerColor);
+    localStorage.setItem(headerColorStorageKey, headerColor);
   }, [headerColor]);
 
   useEffect(() => {
-    localStorage.setItem(SIDEBAR_COLOR_STORAGE_KEY, sidebarColor);
+    localStorage.setItem(sidebarColorStorageKey, sidebarColor);
   }, [sidebarColor]);
 
   useEffect(() => {
     if (appLogoUrl) {
-      localStorage.setItem(APP_LOGO_STORAGE_KEY, appLogoUrl);
+      localStorage.setItem(appLogoStorageKey, appLogoUrl);
       return;
     }
-    localStorage.removeItem(APP_LOGO_STORAGE_KEY);
+    localStorage.removeItem(appLogoStorageKey);
   }, [appLogoUrl]);
 
   useEffect(() => {
     if (companyLogoUrl) {
-      localStorage.setItem(COMPANY_LOGO_STORAGE_KEY, companyLogoUrl);
+      localStorage.setItem(companyLogoStorageKey, companyLogoUrl);
       return;
     }
-    localStorage.removeItem(COMPANY_LOGO_STORAGE_KEY);
+    localStorage.removeItem(companyLogoStorageKey);
   }, [companyLogoUrl]);
 
   const value = useMemo(

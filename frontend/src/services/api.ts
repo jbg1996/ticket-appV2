@@ -1,6 +1,6 @@
 const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
-const DEFAULT_REQUEST_ERROR_MESSAGE = 'Request failed.';
-const DEFAULT_UPLOAD_ERROR_MESSAGE = 'Upload failed.';
+const defaultRequestErrorMessage = 'Request failed.';
+const defaultUploadErrorMessage = 'Upload failed.';
 
 function buildAuthHeaders(existing?: HeadersInit, hasJsonBody?: boolean) {
   const token = localStorage.getItem('token');
@@ -54,19 +54,19 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetchWithAuth(path, options);
-  await ensureOkResponse(response, DEFAULT_REQUEST_ERROR_MESSAGE);
+  await ensureOkResponse(response, defaultRequestErrorMessage);
   return parseJsonResponse<T>(response);
 }
 
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
   const response = await fetchWithAuth(path, { method: 'POST', body: formData });
-  await ensureOkResponse(response, DEFAULT_UPLOAD_ERROR_MESSAGE);
+  await ensureOkResponse(response, defaultUploadErrorMessage);
   return response.json();
 }
 
 export async function apiFetchBlob(path: string, options: RequestInit = {}): Promise<Blob> {
   const response = await fetchWithAuth(path, options);
-  await ensureOkResponse(response, DEFAULT_REQUEST_ERROR_MESSAGE);
+  await ensureOkResponse(response, defaultRequestErrorMessage);
   return response.blob();
 }
 

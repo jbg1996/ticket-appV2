@@ -4,35 +4,19 @@ import fs from 'fs/promises';
 import { Prisma } from '@prisma/client';
 import prisma from '../prisma/client.js';
 import { env } from '../config/env.js';
+import {
+  ticketPriorityLabelMap,
+  ticketStatusLabelMap,
+  ticketTypeLabelMap,
+  toAppPriorityName,
+  toAppStatusName,
+  toAppTypeName
+} from '../constants/ticketCanon.js';
 
 async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
 }
 
-
-const statusLabelMap: Record<string, string> = {
-  NEW: 'New',
-  IN_PROGRESS: 'In Progress',
-  ON_HOLD: 'On Hold',
-  RESOLVED: 'Resolved',
-  CLOSED: 'Closed'
-};
-
-const priorityLabelMap: Record<string, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
-  CRITICAL: 'Critical'
-};
-
-const typeLabelMap: Record<string, string> = {
-  REQUEST: 'Request',
-  INCIDENT: 'Incident',
-  ACCESS: 'Access',
-  HARDWARE: 'Hardware',
-  SOFTWARE: 'Software',
-  OTHER: 'Other'
-};
 
 const titleCase = (value: string) =>
   value
@@ -123,11 +107,11 @@ export async function generateReport(params: GenerateReportParams): Promise<Gene
   ];
   tickets.forEach((ticket) => {
     detailSheet.addRow({
-      type: formatLabel(typeLabelMap, ticket.ticketType.name),
+      type: formatLabel(ticketTypeLabelMap, toAppTypeName(ticket.ticketType.name)),
       title: ticket.title,
       description: ticket.description,
-      status: formatLabel(statusLabelMap, ticket.status.name),
-      priority: formatLabel(priorityLabelMap, ticket.priority.name),
+      status: formatLabel(ticketStatusLabelMap, toAppStatusName(ticket.status.name)),
+      priority: formatLabel(ticketPriorityLabelMap, toAppPriorityName(ticket.priority.name)),
       createdAt: ticket.createdAt
     });
   });
