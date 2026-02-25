@@ -11,7 +11,7 @@ export type DashboardSummary = {
     mttrHours: number;
   };
   createdVsResolvedSeries: Array<{ date: string; createdCount: number; resolvedCount: number }>;
-  statusDistribution: Array<{ statusId: number; statusName: string; count: number; color: string }>;
+  statusDistribution: Array<{ statusId: number; statusName: string; statusLabel?: string; count: number; color: string }>;
   backlogAging: Array<{ bucket: string; count: number }>;
   workloadByTech: Array<{ userId: number; fullName: string; openAssignedCount: number; resolvedInRangeCount: number }>;
   mttrSeries: Array<{ date: string; mttrHours: number }>;

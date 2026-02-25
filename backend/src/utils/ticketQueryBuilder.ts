@@ -258,9 +258,12 @@ function buildGlobalSearch(text: string): Prisma.TicketWhereInput {
       { title: { contains: value } },
       { description: { contains: value } },
       { code: { contains: value } },
-      { status: { name: { contains: value } } },
-      { priority: { name: { contains: value } } },
-      { ticketType: { name: { contains: value } } },
+      { status: { code: { contains: value } } },
+      { status: { label: { contains: value } } },
+      { priority: { code: { contains: value } } },
+      { priority: { label: { contains: value } } },
+      { ticketType: { code: { contains: value } } },
+      { ticketType: { label: { contains: value } } },
       { ticketType: { description: { contains: value } } },
       { createdBy: { OR: [{ firstName: { contains: value } }, { lastName: { contains: value } }] } },
       { assignedTo: { is: { OR: [{ firstName: { contains: value } }, { lastName: { contains: value } }] } } }
@@ -287,13 +290,13 @@ function buildFilters(filters: Record<string, ColumnFilterInput | undefined>): P
         conditions.push({ title: buildTextFilter(filter) });
       }
       if (columnId === 'status') {
-        conditions.push({ status: { name: buildTextFilter(filter) } });
+        conditions.push({ status: { code: buildTextFilter(filter) } });
       }
       if (columnId === 'priority') {
-        conditions.push({ priority: { name: buildTextFilter(filter) } });
+        conditions.push({ priority: { code: buildTextFilter(filter) } });
       }
       if (columnId === 'type') {
-        conditions.push({ ticketType: { name: buildTextFilter(filter) } });
+        conditions.push({ ticketType: { code: buildTextFilter(filter) } });
       }
       if (columnId === 'createdBy') {
         if (filter.op === 'Contains data') {
@@ -324,13 +327,13 @@ function buildOrderBy(sort?: TicketQueryInput['sort']): Prisma.TicketOrderByWith
     case 'updatedAt':
       return { updatedAt: direction };
     case 'priority':
-      return { priority: { name: direction } };
+      return { priority: { code: direction } };
     case 'status':
       return { status: { sortOrder: direction } };
     case 'title':
       return { title: direction };
     case 'type':
-      return { ticketType: { name: direction } };
+      return { ticketType: { code: direction } };
     case 'createdBy':
       return [{ createdBy: { firstName: direction } }, { createdBy: { lastName: direction } }];
     case 'assignedTo':

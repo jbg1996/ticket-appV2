@@ -3,10 +3,10 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const DEFAULT_STATUS_COLOR = '#9CA3AF';
-const TOTAL_TICKETS = 96;
-const OPEN_RATIO = 0.6;
-const DAYS_WINDOW = 90;
+const defaultStatusColor = '#9CA3AF';
+const totalTickets = 96;
+const openRatio = 0.6;
+const daysWindow = 90;
 
 function formatTicketCode(id: number): string {
   return `TM${id.toString().padStart(9, '0')}`;
@@ -53,18 +53,18 @@ async function main() {
   ];
 
   const priorities = [
-    { name: 'LOW', color: '#16a34a' },
-    { name: 'MEDIUM', color: '#2563eb' },
-    { name: 'HIGH', color: '#f97316' },
-    { name: 'CRITICAL', color: '#dc2626' }
+    { name: 'low', code: 'low', label: 'Low', color: '#16a34a' },
+    { name: 'medium', code: 'medium', label: 'Medium', color: '#2563eb' },
+    { name: 'high', code: 'high', label: 'High', color: '#f97316' },
+    { name: 'critical', code: 'critical', label: 'Critical', color: '#dc2626' }
   ];
 
   const statuses = [
-    { name: 'NEW', sortOrder: 1, color: '#3B82F6' },
-    { name: 'IN_PROGRESS', sortOrder: 2, color: '#F59E0B' },
-    { name: 'ON_HOLD', sortOrder: 3, color: '#A855F7' },
-    { name: 'RESOLVED', sortOrder: 4, color: '#22C55E' },
-    { name: 'CLOSED', sortOrder: 5, color: '#6B7280' }
+    { name: 'new', code: 'new', label: 'New', sortOrder: 1, color: '#3B82F6' },
+    { name: 'inProgress', code: 'inProgress', label: 'In Progress', sortOrder: 2, color: '#F59E0B' },
+    { name: 'onHold', code: 'onHold', label: 'On Hold', sortOrder: 3, color: '#A855F7' },
+    { name: 'resolved', code: 'resolved', label: 'Resolved', sortOrder: 4, color: '#22C55E' },
+    { name: 'closed', code: 'closed', label: 'Closed', sortOrder: 5, color: '#6B7280' }
   ];
 
   for (const userType of userTypes) {
@@ -74,14 +74,14 @@ async function main() {
   }
 
   for (const priority of priorities) {
-    const existing = await prisma.priority.findFirst({ where: { name: priority.name } });
+    const existing = await prisma.priority.findFirst({ where: { code: priority.code } });
     if (existing) await prisma.priority.update({ where: { id: existing.id }, data: priority });
     else await prisma.priority.create({ data: priority });
   }
 
   for (const status of statuses) {
-    const existing = await prisma.status.findFirst({ where: { name: status.name } });
-    const data = { ...status, color: status.color || DEFAULT_STATUS_COLOR };
+    const existing = await prisma.status.findFirst({ where: { code: status.code } });
+    const data = { ...status, color: status.color || defaultStatusColor };
     if (existing) await prisma.status.update({ where: { id: existing.id }, data });
     else await prisma.status.create({ data });
   }
@@ -91,27 +91,30 @@ async function main() {
   const statusRecords = await prisma.status.findMany();
 
   const findUserTypeId = (code: string) => userTypeRecords.find((r) => r.code === code)?.id;
-  const findPriorityId = (name: string) =>
-    priorityRecords.find((r) => r.name === name)?.id ?? priorityRecords[0].id;
+  const findPriorityId = (code: string) =>
+    priorityRecords.find((record) => record.code === code)?.id ?? priorityRecords[0].id;
 
   const ticketTypes = [
-    { name: 'INCIDENT', description: 'Describe the incident and how it impacts your work.', defaultPriorityName: 'HIGH' },
-    { name: 'REQUEST', description: 'Describe the request and the expected outcome.', defaultPriorityName: 'MEDIUM' },
-    { name: 'ACCESS', description: 'Indicate the system and required access level.', defaultPriorityName: 'MEDIUM' },
-    { name: 'HARDWARE', description: 'Describe the device and reported fault.', defaultPriorityName: 'HIGH' },
-    { name: 'SOFTWARE', description: 'Indicate the application and issue details.', defaultPriorityName: 'MEDIUM' },
-    { name: 'OTHER', description: 'Provide additional details for the request.', defaultPriorityName: 'LOW' }
+    { name: 'incident', code: 'incident', label: 'Incident', description: 'Describe the incident and how it impacts your work.', defaultPriorityCode: 'high' },
+    { name: 'request', code: 'request', label: 'Request', description: 'Describe the request and the expected outcome.', defaultPriorityCode: 'medium' },
+    { name: 'access', code: 'access', label: 'Access', description: 'Indicate the system and required access level.', defaultPriorityCode: 'medium' },
+    { name: 'hardware', code: 'hardware', label: 'Hardware', description: 'Describe the device and reported fault.', defaultPriorityCode: 'high' },
+    { name: 'software', code: 'software', label: 'Software', description: 'Indicate the application and issue details.', defaultPriorityCode: 'medium' },
+    { name: 'other', code: 'other', label: 'Other', description: 'Provide additional details for the request.', defaultPriorityCode: 'low' }
   ];
 
   for (const t of ticketTypes) {
     const data = {
+      name: t.name,
+      code: t.code,
+      label: t.label,
       description: t.description,
-      defaultPriorityId: findPriorityId(t.defaultPriorityName),
+      defaultPriorityId: findPriorityId(t.defaultPriorityCode),
       isActive: true
     };
-    const existing = await prisma.ticketType.findFirst({ where: { name: t.name } });
+    const existing = await prisma.ticketType.findFirst({ where: { code: t.code } });
     if (existing) await prisma.ticketType.update({ where: { id: existing.id }, data });
-    else await prisma.ticketType.create({ data: { name: t.name, ...data } });
+    else await prisma.ticketType.create({ data });
   }
 
   const adminTypeId = findUserTypeId('ADMIN');
@@ -155,20 +158,20 @@ async function main() {
     throw new Error('Not enough base data found.');
   }
 
-  const openStatusPool = ['NEW', 'IN_PROGRESS', 'ON_HOLD']
-    .map((name) => statusRecords.find((s) => s.name === name))
+  const openStatusPool = ['new', 'inProgress', 'onHold']
+    .map((code) => statusRecords.find((status) => status.code === code))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
-  const closedStatusPool = ['RESOLVED', 'CLOSED']
-    .map((name) => statusRecords.find((s) => s.name === name))
+  const closedStatusPool = ['resolved', 'closed']
+    .map((code) => statusRecords.find((status) => status.code === code))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
-  const openTicketsTarget = Math.floor(TOTAL_TICKETS * OPEN_RATIO);
+  const openTicketsTarget = Math.floor(totalTickets * openRatio);
   const createdTicketIds: number[] = [];
 
-  for (let index = 0; index < TOTAL_TICKETS; index += 1) {
+  for (let index = 0; index < totalTickets; index += 1) {
     const isResolved = index >= openTicketsTarget;
-    const createdAt = randomDateWithinLastDays(DAYS_WINDOW);
+    const createdAt = randomDateWithinLastDays(daysWindow);
     const resolvedAt = isResolved ? buildResolvedDate(createdAt) : null;
 
     const ticket = await prisma.ticket.create({
@@ -208,7 +211,7 @@ async function main() {
           actorId: randomItem([...admins, ...technicians]).id,
           eventType: step === 0 ? 'CREATED' : 'STATUS_CHANGED',
           message: step === 0 ? 'Ticket created from seed.' : 'Simulated status change.',
-          dataJson: step === 0 ? null : JSON.stringify({ from: 'NEW', to: isResolved ? 'RESOLVED' : 'IN_PROGRESS' }),
+          dataJson: step === 0 ? null : JSON.stringify({ from: 'new', to: isResolved ? 'resolved' : 'inProgress' }),
           createdAt: eventAt
         }
       });
@@ -234,7 +237,7 @@ async function main() {
         requesterTechId: requesterTech.id,
         message: 'Please share screenshots and reproduction steps.',
         requestedFields: 'capturas,pasos,error',
-        status: Math.random() < 0.5 ? 'OPEN' : 'CLOSED',
+        status: Math.random() < 0.5 ? 'open' : 'closed',
         createdAt: new Date(t.createdAt.getTime() + randomInt(60, 720) * 60 * 1000),
         closedAt: Math.random() < 0.5 ? new Date() : null
       }

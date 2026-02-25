@@ -10,38 +10,15 @@ async function ensureDir(dir: string) {
 }
 
 
-const statusLabelMap: Record<string, string> = {
-  NEW: 'New',
-  IN_PROGRESS: 'In Progress',
-  ON_HOLD: 'On Hold',
-  RESOLVED: 'Resolved',
-  CLOSED: 'Closed'
+const formatCatalogLabel = (code: string, label?: string | null) => {
+  if (label && label.trim()) return label;
+  return code
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase());
 };
-
-const priorityLabelMap: Record<string, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
-  CRITICAL: 'Critical'
-};
-
-const typeLabelMap: Record<string, string> = {
-  REQUEST: 'Request',
-  INCIDENT: 'Incident',
-  ACCESS: 'Access',
-  HARDWARE: 'Hardware',
-  SOFTWARE: 'Software',
-  OTHER: 'Other'
-};
-
-const titleCase = (value: string) =>
-  value
-    .split('_')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-
-const formatLabel = (labels: Record<string, string>, value: string) => labels[value] ?? titleCase(value);
 
 type ReportPreset = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
@@ -106,9 +83,9 @@ export async function generateReport(params: GenerateReportParams): Promise<Gene
       createdAt: true,
       description: true,
       title: true,
-      priority: { select: { name: true } },
-      status: { select: { name: true } },
-      ticketType: { select: { name: true } }
+      priority: { select: { code: true, label: true } },
+      status: { select: { code: true, label: true } },
+      ticketType: { select: { code: true, label: true } }
     },
     orderBy: orderBy ?? { createdAt: 'desc' }
   });
@@ -123,11 +100,11 @@ export async function generateReport(params: GenerateReportParams): Promise<Gene
   ];
   tickets.forEach((ticket) => {
     detailSheet.addRow({
-      type: formatLabel(typeLabelMap, ticket.ticketType.name),
+      type: formatCatalogLabel(ticket.ticketType.code, ticket.ticketType.label),
       title: ticket.title,
       description: ticket.description,
-      status: formatLabel(statusLabelMap, ticket.status.name),
-      priority: formatLabel(priorityLabelMap, ticket.priority.name),
+      status: formatCatalogLabel(ticket.status.code, ticket.status.label),
+      priority: formatCatalogLabel(ticket.priority.code, ticket.priority.label),
       createdAt: ticket.createdAt
     });
   });

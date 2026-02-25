@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { TICKET_STATUS } from './ticketCanon.js';
+import { canonicalTicketStatus } from './ticketCanon.js';
 
 export const TICKET_VIEW_KEY = {
   ALL_TICKETS: 'ALL_TICKETS',
@@ -75,18 +75,18 @@ export function buildTicketWhere(viewKey: TicketViewKey, currentUser: CurrentTic
     case TICKET_VIEW_KEY.RESOLVED_RELATED_ACTIVE:
       return {
         isActive: true,
-        status: { name: TICKET_STATUS.RESOLVED },
+        status: { code: canonicalTicketStatus.resolved },
         OR: [{ createdById: currentUser.id }, { assignedToId: currentUser.id }]
       };
     case TICKET_VIEW_KEY.UNASSIGNED_OPEN:
       return {
         assignedToId: null,
-        status: { name: { not: TICKET_STATUS.RESOLVED } }
+        status: { code: { not: canonicalTicketStatus.resolved } }
       };
     case TICKET_VIEW_KEY.RESOLVED_CREATED_BY_ME:
       return {
         createdById: currentUser.id,
-        status: { name: TICKET_STATUS.RESOLVED }
+        status: { code: canonicalTicketStatus.resolved }
       };
     default:
       return {};

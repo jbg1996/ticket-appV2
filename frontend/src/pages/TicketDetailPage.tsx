@@ -11,18 +11,18 @@ type Ticket = {
   id: number;
   title: string;
   description: string;
-  status: { id: number; name: string; color?: string | null };
-  priority: { id: number; name: string };
-  ticketType: { name: string };
+  status: { id: number; code: string; label?: string | null; color?: string | null };
+  priority: { id: number; code: string; label?: string | null };
+  ticketType: { code: string; label?: string | null };
   assignedTo?: { firstName: string; lastName: string } | null;
   attachments: { id: number; originalName: string }[];
   history: { id: number; eventType: string; message?: string; createdAt: string; actor: { firstName: string; lastName: string } }[];
   infoRequests: { id: number; message: string; status: string; requesterTech: { firstName: string; lastName: string }; responses: { id: number; message: string; responder: { firstName: string; lastName: string } }[] }[];
 };
 
-type Status = { id: number; name: string; color?: string | null };
+type Status = { id: number; code: string; label?: string | null; color?: string | null };
 
-type Priority = { id: number; name: string };
+type Priority = { id: number; code: string; label?: string | null };
 
 type User = { id: number; firstName: string; lastName: string; isActive: boolean; userType: { name: string; code: string } };
 
@@ -355,11 +355,11 @@ export function TicketDetailPage() {
           <div className="ticket-detail__meta">
             <div className="ticket-detail__meta-item">
               <span className="ticket-detail__meta-label">Type</span>
-              <span className="ticket-detail__meta-value">{ticketTypeLabel(ticket.ticketType.name)}</span>
+              <span className="ticket-detail__meta-value">{ticketTypeLabel(ticket.ticketType.label ?? ticket.ticketType.code)}</span>
             </div>
             <div className="ticket-detail__meta-item">
               <span className="ticket-detail__meta-label">Priority</span>
-              <span className="ticket-detail__meta-value">{ticketPriorityLabel(ticket.priority.name)}</span>
+              <span className="ticket-detail__meta-value">{ticketPriorityLabel(ticket.priority.label ?? ticket.priority.code)}</span>
             </div>
             <div className="ticket-detail__meta-item">
               <span className="ticket-detail__meta-label">Status</span>
@@ -373,7 +373,7 @@ export function TicketDetailPage() {
                     >
                       {statuses.map((status) => (
                         <option key={status.id} value={status.id}>
-                          {ticketStatusLabel(status.name)}
+                          {ticketStatusLabel(status.label ?? status.code)}
                         </option>
                       ))}
                     </select>
@@ -383,7 +383,7 @@ export function TicketDetailPage() {
                 <div className="ticket-detail__state-readonly">
                   <div className="ticket-detail__state-control">
                     <span className="ticket-detail__state-dot" style={{ backgroundColor: statusColor }} aria-hidden="true" />
-                    <span>{ticketStatusLabel(ticket.status.name)}</span>
+                    <span>{ticketStatusLabel(ticket.status.label ?? ticket.status.code)}</span>
                   </div>
                 </div>
               )}
@@ -445,7 +445,7 @@ export function TicketDetailPage() {
                   >
                     {priorities.map((priority) => (
                       <option key={priority.id} value={priority.id}>
-                        {ticketPriorityLabel(priority.name)}
+                        {ticketPriorityLabel(priority.label ?? priority.code)}
                       </option>
                     ))}
                   </select>
