@@ -7,6 +7,7 @@ import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
 import { ReportIcon } from '../components/icons/ReportIcon';
+import { DEFAULT_TICKET_VIEW_BY_ROLE, getAllowedTicketViews, type TicketViewKey } from '../constants/ticketViews';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
@@ -59,9 +60,16 @@ export function TicketsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const allowedViews = useMemo(() => getAllowedTicketViews(user?.role), [user?.role]);
+  const [selectedView, setSelectedView] = useState<TicketViewKey | null>(null);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
-  const loadTickets = async (nextPage = page, nextPageSize = pageSize, searchValue = globalSearch) => {
+  const loadTickets = async (
+    nextPage = page,
+    nextPageSize = pageSize,
+    searchValue = globalSearch,
+    view = selectedView
+  ) => {
     setIsLoading(true);
     setLoadError('');
     try {
@@ -71,6 +79,9 @@ export function TicketsPage() {
       });
       if (searchValue.trim()) {
         params.set('text', searchValue.trim());
+      }
+      if (view) {
+        params.set('view', view);
       }
       const response = await apiFetch<PaginatedTicketsResponse>(`/api/tickets?${params.toString()}`);
       setTickets(response.data);
@@ -90,8 +101,17 @@ export function TicketsPage() {
   };
 
   useEffect(() => {
-    loadTickets(page, pageSize, globalSearch);
-  }, [page, pageSize, globalSearch]);
+    if (!user?.role) return;
+    const defaultView = DEFAULT_TICKET_VIEW_BY_ROLE[user.role];
+    if (selectedView === null) {
+      setSelectedView(defaultView);
+    }
+  }, [user?.role, selectedView]);
+
+  useEffect(() => {
+    if (!selectedView) return;
+    loadTickets(page, pageSize, globalSearch, selectedView);
+  }, [page, pageSize, globalSearch, selectedView]);
 
   useEffect(() => {
     setSelectedIds((prev) => new Set([...prev].filter((id) => tickets.some((ticket) => ticket.id === id))));
@@ -374,9 +394,27 @@ export function TicketsPage() {
       <h2>Tickets</h2>
       <div className="card tickets-card" style={{ marginTop: '16px' }}>
         <div className="tickets-card__header">
-          <h3>All Tickets</h3>
+          <h3>{allowedViews.find((view) => view.key === selectedView)?.label ?? 'Tickets'}</h3>
         </div>
         <div className="tickets-toolbar">
+          <div className="tickets-toolbar__view">
+            <label htmlFor="ticket-view-select">View</label>
+            <select
+              id="ticket-view-select"
+              value={selectedView ?? ''}
+              onChange={(event) => {
+                setSelectedView(event.target.value as TicketViewKey);
+                setPage(1);
+              }}
+              title={allowedViews.find((view) => view.key === selectedView)?.description}
+            >
+              {allowedViews.map((view) => (
+                <option key={view.key} value={view.key}>
+                  {view.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <input
             className="tickets-toolbar__search"
             placeholder="Search tickets..."

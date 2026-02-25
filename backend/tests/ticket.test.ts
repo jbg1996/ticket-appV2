@@ -9,9 +9,11 @@ let ticketTypeId = 0;
 let statusId = 0;
 let priorityId = 0;
 let userId = 0;
+let requesterToken = '';
 
 beforeAll(async () => {
   const adminType = await prisma.userType.create({ data: { name: 'Admin', code: 'ADMIN' } });
+  const requesterType = await prisma.userType.create({ data: { name: 'Requester', code: 'REQUESTER' } });
   const passwordHash = await bcrypt.hash('Password123!', 10);
   const user = await prisma.user.create({
     data: {
@@ -42,6 +44,21 @@ beforeAll(async () => {
     .post('/api/auth/login')
     .send({ email: 'ticket@test.local', password: 'Password123!' });
   token = loginRes.body.token;
+
+  await prisma.user.create({
+    data: {
+      firstName: 'Req',
+      lastName: 'User',
+      email: 'requester@test.local',
+      passwordHash,
+      userTypeId: requesterType.id
+    }
+  });
+
+  const requesterLoginRes = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'requester@test.local', password: 'Password123!' });
+  requesterToken = requesterLoginRes.body.token;
 });
 
 afterAll(async () => {
@@ -65,6 +82,21 @@ describe('Ticket creation', () => {
     expect(response.body.creatorId).toBe(userId);
   });
 
+
+
+  it('rejects unauthorized ticket views for requester users', async () => {
+    const forbiddenViewResponse = await request(app)
+      .get('/api/tickets?view=ALL_TICKETS')
+      .set('Authorization', `Bearer ${requesterToken}`);
+
+    expect(forbiddenViewResponse.status).toBe(403);
+
+    const invalidViewResponse = await request(app)
+      .get('/api/tickets?view=NOT_A_VIEW')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(invalidViewResponse.status).toBe(400);
+  });
 
   it('returns paginated tickets metadata', async () => {
     for (let index = 0; index < 25; index += 1) {

@@ -13,6 +13,7 @@ import {
   TICKET_STATUS,
   TICKET_TYPE
 } from '../constants/ticketCanon.js';
+import { buildTicketWhere, isTicketViewKey, isViewAllowedForRole } from '../constants/ticketViews.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,6 +35,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
     createdById,
     assignedToId,
     text,
+    view,
     sortBy,
     sortDir,
     page,
@@ -41,6 +43,18 @@ export async function listTickets(req: AuthRequest, res: Response) {
   } = req.query as Record<string, string>;
 
   const baseWhere: Prisma.TicketWhereInput = {};
+  if (view) {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized.' });
+    }
+    if (!isTicketViewKey(view)) {
+      return res.status(400).json({ message: 'Invalid ticket view.' });
+    }
+    if (!isViewAllowedForRole(view, req.user.role)) {
+      return res.status(403).json({ message: 'Ticket view not allowed for this role.' });
+    }
+    Object.assign(baseWhere, buildTicketWhere(view, req.user));
+  }
   const parsedStatusId = parseOptionalId(statusId);
   if (statusId && !parsedStatusId) {
     return res.status(400).json({ message: 'Invalid status id.' });
