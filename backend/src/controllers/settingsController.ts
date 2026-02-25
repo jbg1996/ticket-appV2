@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../prisma/client.js';
 
-const defaultHeaderColor = '#1f2937';
-const defaultSidebarColor = '#0f172a';
+const DEFAULT_HEADER_COLOR = '#1f2937';
+const DEFAULT_SIDEBAR_COLOR = '#0f172a';
 
 const colorSchema = z.string().trim().regex(/^#(?:[0-9a-fA-F]{3}){1,2}$/, 'Color must be a valid hex code.');
 
@@ -19,8 +19,8 @@ export async function getAppSettings(_req: Request, res: Response) {
   });
 
   const byKey = new Map(settings.map((setting) => [setting.key, setting.value]));
-  const headerColor = byKey.get('HEADER_COLOR') ?? defaultHeaderColor;
-  const sidebarColor = byKey.get('SIDEBAR_COLOR') ?? headerColor ?? defaultSidebarColor;
+  const headerColor = byKey.get('HEADER_COLOR') ?? DEFAULT_HEADER_COLOR;
+  const sidebarColor = byKey.get('SIDEBAR_COLOR') ?? headerColor ?? DEFAULT_SIDEBAR_COLOR;
 
   res.json({ headerColor, sidebarColor });
 }

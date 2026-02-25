@@ -7,7 +7,7 @@ import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
 import { ReportIcon } from '../components/icons/ReportIcon';
-import { defaultTicketViewByRole, getAllowedTicketViews, type ticketViewKeyName } from '../constants/ticketViews';
+import { DEFAULT_TICKET_VIEW_BY_ROLE, getAllowedTicketViews, type TicketViewKey } from '../constants/ticketViews';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
@@ -61,7 +61,7 @@ export function TicketsPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const allowedViews = useMemo(() => getAllowedTicketViews(user?.role), [user?.role]);
-  const [selectedView, setSelectedView] = useState<ticketViewKeyName | null>(null);
+  const [selectedView, setSelectedView] = useState<TicketViewKey | null>(null);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
   const loadTickets = async (
@@ -102,7 +102,7 @@ export function TicketsPage() {
 
   useEffect(() => {
     if (!user?.role) return;
-    const defaultView = defaultTicketViewByRole[user.role];
+    const defaultView = DEFAULT_TICKET_VIEW_BY_ROLE[user.role];
     if (selectedView === null) {
       setSelectedView(defaultView);
     }
@@ -403,7 +403,7 @@ export function TicketsPage() {
               id="ticket-view-select"
               value={selectedView ?? ''}
               onChange={(event) => {
-                setSelectedView(event.target.value as ticketViewKeyName);
+                setSelectedView(event.target.value as TicketViewKey);
                 setPage(1);
               }}
               title={allowedViews.find((view) => view.key === selectedView)?.description}
