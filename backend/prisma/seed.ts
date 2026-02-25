@@ -3,39 +3,10 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const defaultStatusColor = '#9CA3AF';
-const totalTickets = 96;
-const openRatio = 0.6;
-const daysWindow = 90;
-
-
-const statusDbByApp: Record<string, string> = {
-  new: 'NEW',
-  inProgress: 'IN_PROGRESS',
-  onHold: 'ON_HOLD',
-  resolved: 'RESOLVED',
-  closed: 'CLOSED'
-};
-
-const priorityDbByApp: Record<string, string> = {
-  low: 'LOW',
-  medium: 'MEDIUM',
-  high: 'HIGH',
-  critical: 'CRITICAL'
-};
-
-const typeDbByApp: Record<string, string> = {
-  request: 'REQUEST',
-  incident: 'INCIDENT',
-  access: 'ACCESS',
-  hardware: 'HARDWARE',
-  software: 'SOFTWARE',
-  other: 'OTHER'
-};
-
-const toDbStatusName = (value: string) => statusDbByApp[value] ?? value;
-const toDbPriorityName = (value: string) => priorityDbByApp[value] ?? value;
-const toDbTypeName = (value: string) => typeDbByApp[value] ?? value;
+const DEFAULT_STATUS_COLOR = '#9CA3AF';
+const TOTAL_TICKETS = 96;
+const OPEN_RATIO = 0.6;
+const DAYS_WINDOW = 90;
 
 function formatTicketCode(id: number): string {
   return `TM${id.toString().padStart(9, '0')}`;
@@ -82,18 +53,18 @@ async function main() {
   ];
 
   const priorities = [
-    { name: toDbPriorityName('low'), color: '#16a34a' },
-    { name: toDbPriorityName('medium'), color: '#2563eb' },
-    { name: toDbPriorityName('high'), color: '#f97316' },
-    { name: toDbPriorityName('critical'), color: '#dc2626' }
+    { name: 'LOW', color: '#16a34a' },
+    { name: 'MEDIUM', color: '#2563eb' },
+    { name: 'HIGH', color: '#f97316' },
+    { name: 'CRITICAL', color: '#dc2626' }
   ];
 
   const statuses = [
-    { name: toDbStatusName('new'), sortOrder: 1, color: '#3B82F6' },
-    { name: toDbStatusName('inProgress'), sortOrder: 2, color: '#F59E0B' },
-    { name: toDbStatusName('onHold'), sortOrder: 3, color: '#A855F7' },
-    { name: toDbStatusName('resolved'), sortOrder: 4, color: '#22C55E' },
-    { name: toDbStatusName('closed'), sortOrder: 5, color: '#6B7280' }
+    { name: 'NEW', sortOrder: 1, color: '#3B82F6' },
+    { name: 'IN_PROGRESS', sortOrder: 2, color: '#F59E0B' },
+    { name: 'ON_HOLD', sortOrder: 3, color: '#A855F7' },
+    { name: 'RESOLVED', sortOrder: 4, color: '#22C55E' },
+    { name: 'CLOSED', sortOrder: 5, color: '#6B7280' }
   ];
 
   for (const userType of userTypes) {
@@ -110,7 +81,7 @@ async function main() {
 
   for (const status of statuses) {
     const existing = await prisma.status.findFirst({ where: { name: status.name } });
-    const data = { ...status, color: status.color || defaultStatusColor };
+    const data = { ...status, color: status.color || DEFAULT_STATUS_COLOR };
     if (existing) await prisma.status.update({ where: { id: existing.id }, data });
     else await prisma.status.create({ data });
   }
@@ -124,12 +95,12 @@ async function main() {
     priorityRecords.find((r) => r.name === name)?.id ?? priorityRecords[0].id;
 
   const ticketTypes = [
-    { name: toDbTypeName('incident'), description: 'Describe the incident and how it impacts your work.', defaultPriorityName: toDbPriorityName('high') },
-    { name: toDbTypeName('request'), description: 'Describe the request and the expected outcome.', defaultPriorityName: toDbPriorityName('medium') },
-    { name: toDbTypeName('access'), description: 'Indicate the system and required access level.', defaultPriorityName: toDbPriorityName('medium') },
-    { name: toDbTypeName('hardware'), description: 'Describe the device and reported fault.', defaultPriorityName: toDbPriorityName('high') },
-    { name: toDbTypeName('software'), description: 'Indicate the application and issue details.', defaultPriorityName: toDbPriorityName('medium') },
-    { name: toDbTypeName('other'), description: 'Provide additional details for the request.', defaultPriorityName: toDbPriorityName('low') }
+    { name: 'INCIDENT', description: 'Describe the incident and how it impacts your work.', defaultPriorityName: 'HIGH' },
+    { name: 'REQUEST', description: 'Describe the request and the expected outcome.', defaultPriorityName: 'MEDIUM' },
+    { name: 'ACCESS', description: 'Indicate the system and required access level.', defaultPriorityName: 'MEDIUM' },
+    { name: 'HARDWARE', description: 'Describe the device and reported fault.', defaultPriorityName: 'HIGH' },
+    { name: 'SOFTWARE', description: 'Indicate the application and issue details.', defaultPriorityName: 'MEDIUM' },
+    { name: 'OTHER', description: 'Provide additional details for the request.', defaultPriorityName: 'LOW' }
   ];
 
   for (const t of ticketTypes) {
@@ -184,20 +155,20 @@ async function main() {
     throw new Error('Not enough base data found.');
   }
 
-  const openStatusPool = [toDbStatusName('new'), toDbStatusName('inProgress'), toDbStatusName('onHold')]
+  const openStatusPool = ['NEW', 'IN_PROGRESS', 'ON_HOLD']
     .map((name) => statusRecords.find((s) => s.name === name))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
-  const closedStatusPool = [toDbStatusName('resolved'), toDbStatusName('closed')]
+  const closedStatusPool = ['RESOLVED', 'CLOSED']
     .map((name) => statusRecords.find((s) => s.name === name))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
-  const openTicketsTarget = Math.floor(totalTickets * openRatio);
+  const openTicketsTarget = Math.floor(TOTAL_TICKETS * OPEN_RATIO);
   const createdTicketIds: number[] = [];
 
-  for (let index = 0; index < totalTickets; index += 1) {
+  for (let index = 0; index < TOTAL_TICKETS; index += 1) {
     const isResolved = index >= openTicketsTarget;
-    const createdAt = randomDateWithinLastDays(daysWindow);
+    const createdAt = randomDateWithinLastDays(DAYS_WINDOW);
     const resolvedAt = isResolved ? buildResolvedDate(createdAt) : null;
 
     const ticket = await prisma.ticket.create({
@@ -237,7 +208,7 @@ async function main() {
           actorId: randomItem([...admins, ...technicians]).id,
           eventType: step === 0 ? 'CREATED' : 'STATUS_CHANGED',
           message: step === 0 ? 'Ticket created from seed.' : 'Simulated status change.',
-          dataJson: step === 0 ? null : JSON.stringify({ from: toDbStatusName('new'), to: isResolved ? toDbStatusName('resolved') : toDbStatusName('inProgress') }),
+          dataJson: step === 0 ? null : JSON.stringify({ from: 'NEW', to: isResolved ? 'RESOLVED' : 'IN_PROGRESS' }),
           createdAt: eventAt
         }
       });

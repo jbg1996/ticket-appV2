@@ -1,4 +1,4 @@
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 type RgbColor = {
   r: number;
@@ -18,7 +18,7 @@ function clamp(value: number, min: number, max: number) {
 
 function normalizeHex(hex: string) {
   const trimmed = hex.trim();
-  if (!hexColorPattern.test(trimmed)) {
+  if (!HEX_COLOR_PATTERN.test(trimmed)) {
     return null;
   }
   const raw = trimmed.slice(1);
@@ -177,5 +177,5 @@ export function getSidebarTheme(sidebarColor: string) {
 }
 
 export function isValidHexColor(color: string) {
-  return hexColorPattern.test(color.trim());
+  return HEX_COLOR_PATTERN.test(color.trim());
 }
