@@ -45,39 +45,41 @@ export function LoginPage() {
   };
 
   return (
-    <div className="container">
-      <div className="card login-card">
-        <div className="login-card__header" style={{ backgroundColor: headerColor }}>
-          {appLogoUrl && isLogoVisible ? (
-            <img src={appLogoUrl} alt="Application logo" className="login-card__logo" onError={() => setIsLogoVisible(false)} />
-          ) : (
-            <span className="login-card__logo-fallback">TiMapp</span>
-          )}
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="card login-card">
+          <div className="login-card__header" style={{ backgroundColor: headerColor }}>
+            {appLogoUrl && isLogoVisible ? (
+              <img src={appLogoUrl} alt="Application logo" className="login-card__logo" onError={() => setIsLogoVisible(false)} />
+            ) : (
+              <span className="login-card__logo-fallback">TiMapp</span>
+            )}
+          </div>
+          <h2>Login</h2>
+          <form onSubmit={handleSubmit} className="grid">
+            <label>
+              Email
+              <div className="input-with-icon">
+                <Mail size={16} aria-hidden="true" className="input-with-icon__icon" />
+                <input value={email} onChange={(event) => setEmail(event.target.value)} className="input-with-icon__control" />
+              </div>
+            </label>
+            <label>
+              Password
+              <div className="input-with-icon">
+                <Lock size={16} aria-hidden="true" className="input-with-icon__icon" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="input-with-icon__control"
+                />
+              </div>
+            </label>
+            {error && <p style={{ color: 'crimson' }}>{error}</p>}
+            <button type="submit">Sign in</button>
+          </form>
         </div>
-        <h2>Login</h2>
-        <form onSubmit={handleSubmit} className="grid">
-          <label>
-            Email
-            <div className="input-with-icon">
-              <Mail size={16} aria-hidden="true" className="input-with-icon__icon" />
-              <input value={email} onChange={(event) => setEmail(event.target.value)} className="input-with-icon__control" />
-            </div>
-          </label>
-          <label>
-            Password
-            <div className="input-with-icon">
-              <Lock size={16} aria-hidden="true" className="input-with-icon__icon" />
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="input-with-icon__control"
-              />
-            </div>
-          </label>
-          {error && <p style={{ color: 'crimson' }}>{error}</p>}
-          <button type="submit">Sign in</button>
-        </form>
       </div>
     </div>
   );
