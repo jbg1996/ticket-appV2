@@ -19,6 +19,7 @@ import {
 import { ChartEmptyState } from '../components/dashboard/ChartEmptyState';
 import { DashboardChartTooltip } from '../components/dashboard/DashboardChartTooltip';
 import { useDashboardData, type DashboardGranularity } from '../hooks/useDashboardData';
+import { ticketStatusLabel } from '../constants/ticketLabels';
 
 const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -119,6 +120,14 @@ export function DashboardPage() {
     workloadTopTen.flatMap((point) => [point.openAssignedCount, point.resolvedInRangeCount])
   );
   const hasMttrData = hasValues(data.mttrSeries.map((point) => point.mttrHours));
+  const statusDistributionChartData = useMemo(
+    () =>
+      data.statusDistribution.map((point) => ({
+        ...point,
+        statusDisplayName: ticketStatusLabel(point.statusName)
+      })),
+    [data.statusDistribution]
+  );
 
   return (
     <div className="page dashboard-page">
@@ -214,8 +223,8 @@ export function DashboardPage() {
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
-                <Pie data={data.statusDistribution} dataKey="count" nameKey="statusName" outerRadius={90} label>
-                  {data.statusDistribution.map((entry) => (
+                <Pie data={statusDistributionChartData} dataKey="count" nameKey="statusDisplayName" outerRadius={90} label>
+                  {statusDistributionChartData.map((entry) => (
                     <Cell key={entry.statusId} fill={entry.color || '#94a3b8'} />
                   ))}
                 </Pie>

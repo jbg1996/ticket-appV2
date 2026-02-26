@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
+import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../constants/ticketLabels';
 import { useAuth } from '../components/AuthProvider';
 import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
 import { ReportIcon } from '../components/icons/ReportIcon';
+import { DEFAULT_TICKET_VIEW_BY_ROLE, getAllowedTicketViews, type TicketViewKey } from '../constants/ticketViews';
 import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
 
 type Ticket = {
@@ -22,6 +24,13 @@ type Ticket = {
 };
 
 type SortState = { columnId: string; direction: 'asc' | 'desc' };
+type PaginatedTicketsResponse = {
+  data: Ticket[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
 
 type ColumnDefinition = {
   id: string;
@@ -45,17 +54,64 @@ export function TicketsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [feedback, setFeedback] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const allowedViews = useMemo(() => getAllowedTicketViews(user?.role), [user?.role]);
+  const [selectedView, setSelectedView] = useState<TicketViewKey | null>(null);
   const selectAllRef = useRef<HTMLInputElement | null>(null);
 
-  const loadTickets = () => {
-    apiFetch<Ticket[]>('/api/tickets')
-      .then(setTickets)
-      .catch(() => setTickets([]));
+  const loadTickets = async (
+    nextPage = page,
+    nextPageSize = pageSize,
+    searchValue = globalSearch,
+    view = selectedView
+  ) => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      const params = new URLSearchParams({
+        page: nextPage.toString(),
+        pageSize: nextPageSize.toString()
+      });
+      if (searchValue.trim()) {
+        params.set('text', searchValue.trim());
+      }
+      if (view) {
+        params.set('view', view);
+      }
+      const response = await apiFetch<PaginatedTicketsResponse>(`/api/tickets?${params.toString()}`);
+      setTickets(response.data);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
+      if (response.page !== nextPage) {
+        setPage(response.page);
+      }
+    } catch {
+      setTickets([]);
+      setTotal(0);
+      setTotalPages(1);
+      setLoadError('No se pudieron cargar los tickets.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadTickets();
-  }, []);
+    if (!user?.role) return;
+    const defaultView = DEFAULT_TICKET_VIEW_BY_ROLE[user.role];
+    if (selectedView === null) {
+      setSelectedView(defaultView);
+    }
+  }, [user?.role, selectedView]);
+
+  useEffect(() => {
+    if (!selectedView) return;
+    loadTickets(page, pageSize, globalSearch, selectedView);
+  }, [page, pageSize, globalSearch, selectedView]);
 
   useEffect(() => {
     setSelectedIds((prev) => new Set([...prev].filter((id) => tickets.some((ticket) => ticket.id === id))));
@@ -64,9 +120,9 @@ export function TicketsPage() {
   const columnDefinitions: ColumnDefinition[] = useMemo(
     () => [
       { id: 'title', label: 'Title', accessor: (ticket) => formatTicketDisplayName(ticket) },
-      { id: 'status', label: 'Status', accessor: (ticket) => ticket.status?.name },
-      { id: 'priority', label: 'Priority', accessor: (ticket) => ticket.priority?.name },
-      { id: 'type', label: 'Type', accessor: (ticket) => ticket.ticketType?.name },
+      { id: 'status', label: 'Status', accessor: (ticket) => ticketStatusLabel(ticket.status?.name ?? '') },
+      { id: 'priority', label: 'Priority', accessor: (ticket) => ticketPriorityLabel(ticket.priority?.name ?? '') },
+      { id: 'type', label: 'Type', accessor: (ticket) => ticketTypeLabel(ticket.ticketType?.name ?? '') },
       { id: 'createdAt', label: 'Created At', accessor: (ticket) => ticket.createdAt, isDate: true },
       { id: 'updatedAt', label: 'Updated At', accessor: (ticket) => ticket.updatedAt, isDate: true },
       {
@@ -88,18 +144,7 @@ export function TicketsPage() {
     [columnDefinitions]
   );
 
-  const globalSearchFields = useMemo(
-    () => [
-      (ticket: Ticket) => formatTicketDisplayName(ticket),
-      (ticket: Ticket) => ticket.ticketType?.description ?? '',
-      (ticket: Ticket) => ticket.status?.name ?? '',
-      (ticket: Ticket) => ticket.priority?.name ?? '',
-      (ticket: Ticket) => ticket.ticketType?.name ?? '',
-      (ticket: Ticket) => (ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : ''),
-      (ticket: Ticket) => (ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : '')
-    ],
-    []
-  );
+
 
   const normalizeValue = (value: string | number | null | undefined) => (value ?? '').toString().toLowerCase();
 
@@ -209,12 +254,6 @@ export function TicketsPage() {
 
   const applyAll = (data: Ticket[]) => {
     let result = [...data];
-    if (globalSearch.trim()) {
-      const query = globalSearch.toLowerCase();
-      result = result.filter((ticket) =>
-        globalSearchFields.some((field) => normalizeValue(field(ticket)).includes(query))
-      );
-    }
     Object.entries(columnFilters).forEach(([columnId, filter]) => {
       const column = columnMap[columnId];
       if (!column) return;
@@ -239,7 +278,7 @@ export function TicketsPage() {
     return result;
   };
 
-  const displayTickets = useMemo(() => applyAll(tickets), [tickets, globalSearch, columnFilters, sorting]);
+  const displayTickets = useMemo(() => applyAll(tickets), [tickets, columnFilters, sorting]);
   const visibleIds = useMemo(() => displayTickets.map((ticket) => ticket.id), [displayTickets]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const isAdmin = user?.role === 'ADMIN';
@@ -355,14 +394,35 @@ export function TicketsPage() {
       <h2>Tickets</h2>
       <div className="card tickets-card" style={{ marginTop: '16px' }}>
         <div className="tickets-card__header">
-          <h3>All Tickets</h3>
+          <h3>{allowedViews.find((view) => view.key === selectedView)?.label ?? 'Tickets'}</h3>
         </div>
         <div className="tickets-toolbar">
+          <div className="tickets-toolbar__view">
+            <label htmlFor="ticket-view-select">View</label>
+            <select
+              id="ticket-view-select"
+              value={selectedView ?? ''}
+              onChange={(event) => {
+                setSelectedView(event.target.value as TicketViewKey);
+                setPage(1);
+              }}
+              title={allowedViews.find((view) => view.key === selectedView)?.description}
+            >
+              {allowedViews.map((view) => (
+                <option key={view.key} value={view.key}>
+                  {view.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <input
             className="tickets-toolbar__search"
             placeholder="Search tickets..."
             value={globalSearch}
-            onChange={(event) => setGlobalSearch(event.target.value)}
+            onChange={(event) => {
+              setGlobalSearch(event.target.value);
+              setPage(1);
+            }}
           />
           <div className="tickets-toolbar__actions">
             <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
@@ -398,6 +458,7 @@ export function TicketsPage() {
           </div>
         </div>
         {feedback ? <p className="form-error">{feedback}</p> : null}
+        {loadError ? <p className="form-error">{loadError}</p> : null}
         <table className="table">
           <thead>
             <tr>
@@ -445,9 +506,9 @@ export function TicketsPage() {
                 <td>
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
-                <td>{ticket.status.name}</td>
-                <td>{ticket.priority.name}</td>
-                <td>{ticket.ticketType.name}</td>
+                <td>{ticketStatusLabel(ticket.status.name)}</td>
+                <td>{ticketPriorityLabel(ticket.priority.name)}</td>
+                <td>{ticketTypeLabel(ticket.ticketType.name)}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
                 <td>{formatDate(ticket.updatedAt)}</td>
                 <td>{ticket.createdBy ? `${ticket.createdBy.firstName} ${ticket.createdBy.lastName}` : '—'}</td>
@@ -461,6 +522,42 @@ export function TicketsPage() {
             )}
           </tbody>
         </table>
+        <div className="tickets-pagination" aria-label="Ticket pagination controls">
+          <span className="tickets-pagination__summary">
+            {isLoading ? 'Loading tickets...' : `${total} tickets`}
+          </span>
+          <div className="tickets-pagination__controls">
+            <div className="tickets-pagination__page-size">
+              <label htmlFor="tickets-page-size">Rows</label>
+              <select
+                id="tickets-page-size"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+            <button type="button" className="tickets-toolbar__button secondary" onClick={() => setPage((prev) => prev - 1)} disabled={page <= 1 || isLoading}>
+              Previous
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="tickets-toolbar__button secondary"
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={page >= totalPages || isLoading}
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

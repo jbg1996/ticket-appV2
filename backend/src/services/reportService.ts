@@ -9,6 +9,40 @@ async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
 }
 
+
+const statusLabelMap: Record<string, string> = {
+  NEW: 'New',
+  IN_PROGRESS: 'In Progress',
+  ON_HOLD: 'On Hold',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed'
+};
+
+const priorityLabelMap: Record<string, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  CRITICAL: 'Critical'
+};
+
+const typeLabelMap: Record<string, string> = {
+  REQUEST: 'Request',
+  INCIDENT: 'Incident',
+  ACCESS: 'Access',
+  HARDWARE: 'Hardware',
+  SOFTWARE: 'Software',
+  OTHER: 'Other'
+};
+
+const titleCase = (value: string) =>
+  value
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
+const formatLabel = (labels: Record<string, string>, value: string) => labels[value] ?? titleCase(value);
+
 type ReportPreset = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
 type GenerateReportParams =
@@ -89,11 +123,11 @@ export async function generateReport(params: GenerateReportParams): Promise<Gene
   ];
   tickets.forEach((ticket) => {
     detailSheet.addRow({
-      type: ticket.ticketType.name,
+      type: formatLabel(typeLabelMap, ticket.ticketType.name),
       title: ticket.title,
       description: ticket.description,
-      status: ticket.status.name,
-      priority: ticket.priority.name,
+      status: formatLabel(statusLabelMap, ticket.status.name),
+      priority: formatLabel(priorityLabelMap, ticket.priority.name),
       createdAt: ticket.createdAt
     });
   });
