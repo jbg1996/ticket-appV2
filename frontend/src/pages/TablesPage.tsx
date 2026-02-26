@@ -13,6 +13,7 @@ import {
   updateStatus,
   updateTicketType
 } from '../services/api';
+import { ticketPriorityLabel } from '../constants/ticketLabels';
 type TicketType = { id: number; name: string; description: string; defaultPriorityId: number; defaultPriority?: { name: string } };
 type Priority = { id: number; name: string; color: string };
 type Status = { id: number; name: string; sortOrder: number; color?: string | null };
@@ -231,7 +232,7 @@ export function TablesPage() {
               <option value="">Default Priority</option>
               {priorities.map((priority) => (
                 <option key={priority.id} value={priority.id}>
-                  {priority.name}
+                  {ticketPriorityLabel(priority.name)}
                 </option>
               ))}
             </select>
@@ -276,7 +277,7 @@ export function TablesPage() {
                 <option value="">Default Priority</option>
                 {priorities.map((priority) => (
                   <option key={priority.id} value={priority.id}>
-                    {priority.name}
+                    {ticketPriorityLabel(priority.name)}
                   </option>
                 ))}
               </select>

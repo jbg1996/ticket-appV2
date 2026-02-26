@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../services/api';
+import { ticketPriorityLabel, ticketStatusLabel } from '../constants/ticketLabels';
 
 type Ticket = {
   id: number;
@@ -42,7 +43,7 @@ export function RecentTicketsPage() {
               >
                 <div>
                   <strong>{formatTicketDisplayName(ticket)}</strong>
-                  <div className="list__meta">Status: {ticket.status.name} • Priority: {ticket.priority.name}</div>
+                  <div className="list__meta">Status: {ticketStatusLabel(ticket.status.name)} • Priority: {ticketPriorityLabel(ticket.priority.name)}</div>
                   <div className="list__meta">
                     Updated {new Date(ticket.updatedAt).toLocaleString()} • Created {new Date(ticket.createdAt).toLocaleString()}
                   </div>

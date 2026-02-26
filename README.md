@@ -73,5 +73,41 @@ POST /api/reports/generate?period=daily|weekly|monthly
 ## Notes / Assumptions
 - App Settings (Admin → App) lets you configure header and sidebar colors, persisted in SQLite via Prisma.
 - JWT is stored in `localStorage` and sent as `Authorization: Bearer <token>`.
-- Ticket title auto-fills from ticket type. If ticket type is `OTROS`, the UI shows a custom title field that becomes the stored title.
-- Delete safeguard: only Admin can delete, and only if status is `Nuevo` and within 24 hours of creation.
+- Ticket title auto-fills from ticket type. If ticket type is `OTHER`, the UI shows a custom title field that becomes the stored title.
+- Delete safeguard: only Admin can delete, and only if status is `NEW` and within 24 hours of creation.
+
+
+## Ticket Table Views (CRM-style)
+
+### Available `view` keys
+- `ALL_TICKETS`
+- `CREATED_BY_ME`
+- `ASSIGNED_TO_ME`
+- `RESOLVED_RELATED_ACTIVE`
+- `UNASSIGNED_OPEN`
+- `RESOLVED_CREATED_BY_ME`
+
+### Backend validation rules
+- Endpoint: `GET /api/tickets?view=<VIEW_KEY>`.
+- If `view` is missing, existing ticket listing behavior is preserved.
+- If `view` is unknown, backend returns `400 Invalid ticket view`.
+- If `view` is valid but not allowed for the logged-in role, backend returns `403 Ticket view not allowed for this role`.
+- View filters are centralized in `buildTicketWhere(viewKey, currentUser)` in `backend/src/constants/ticketViews.ts`.
+
+### Role access matrix
+- `ADMIN`: `ALL_TICKETS`, `CREATED_BY_ME`, `ASSIGNED_TO_ME`, `RESOLVED_RELATED_ACTIVE`, `UNASSIGNED_OPEN`
+- `TECH`: `CREATED_BY_ME`, `ASSIGNED_TO_ME`, `RESOLVED_RELATED_ACTIVE`, `UNASSIGNED_OPEN`
+- `REQUESTER`: `CREATED_BY_ME`, `RESOLVED_CREATED_BY_ME`
+
+### How to add a new view
+1. Add a new key in `TICKET_VIEW_KEY` in backend and frontend constants files.
+2. Add metadata (`label`, `description`, `rolesAllowed`) in each view definitions map/list.
+3. Extend backend `buildTicketWhere` with the Prisma `where` clause for the new key.
+4. (Optional) update role defaults in `DEFAULT_TICKET_VIEW_BY_ROLE` for UI behavior.
+5. Add/update tests under `backend/tests` to validate key, permissions, and filter behavior.
+
+### Tests
+```bash
+cd backend
+npm test
+```

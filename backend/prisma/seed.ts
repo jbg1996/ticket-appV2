@@ -53,18 +53,18 @@ async function main() {
   ];
 
   const priorities = [
-    { name: 'Baja', color: '#16a34a' },
-    { name: 'Media', color: '#2563eb' },
-    { name: 'Alta', color: '#f97316' },
-    { name: 'Crítica', color: '#dc2626' }
+    { name: 'LOW', color: '#16a34a' },
+    { name: 'MEDIUM', color: '#2563eb' },
+    { name: 'HIGH', color: '#f97316' },
+    { name: 'CRITICAL', color: '#dc2626' }
   ];
 
   const statuses = [
-    { name: 'Nuevo', sortOrder: 1, color: '#3B82F6' },
-    { name: 'En progreso', sortOrder: 2, color: '#F59E0B' },
-    { name: 'En espera', sortOrder: 3, color: '#A855F7' },
-    { name: 'Resuelto', sortOrder: 4, color: '#22C55E' },
-    { name: 'Cerrado', sortOrder: 5, color: '#6B7280' }
+    { name: 'NEW', sortOrder: 1, color: '#3B82F6' },
+    { name: 'IN_PROGRESS', sortOrder: 2, color: '#F59E0B' },
+    { name: 'ON_HOLD', sortOrder: 3, color: '#A855F7' },
+    { name: 'RESOLVED', sortOrder: 4, color: '#22C55E' },
+    { name: 'CLOSED', sortOrder: 5, color: '#6B7280' }
   ];
 
   for (const userType of userTypes) {
@@ -95,12 +95,12 @@ async function main() {
     priorityRecords.find((r) => r.name === name)?.id ?? priorityRecords[0].id;
 
   const ticketTypes = [
-    { name: 'INCIDENCIA', description: 'Describe el incidente y cómo afecta tu trabajo.', defaultPriorityName: 'Alta' },
-    { name: 'PETICIÓN', description: 'Describe la solicitud y el resultado esperado.', defaultPriorityName: 'Media' },
-    { name: 'ACCESO', description: 'Indica el sistema y el nivel de acceso requerido.', defaultPriorityName: 'Media' },
-    { name: 'HARDWARE', description: 'Describe el equipo y la falla reportada.', defaultPriorityName: 'Alta' },
-    { name: 'SOFTWARE', description: 'Indica la aplicación y los detalles del problema.', defaultPriorityName: 'Media' },
-    { name: 'OTROS', description: 'Proporciona detalles adicionales para la solicitud.', defaultPriorityName: 'Baja' }
+    { name: 'INCIDENT', description: 'Describe the incident and how it impacts your work.', defaultPriorityName: 'HIGH' },
+    { name: 'REQUEST', description: 'Describe the request and the expected outcome.', defaultPriorityName: 'MEDIUM' },
+    { name: 'ACCESS', description: 'Indicate the system and required access level.', defaultPriorityName: 'MEDIUM' },
+    { name: 'HARDWARE', description: 'Describe the device and reported fault.', defaultPriorityName: 'HIGH' },
+    { name: 'SOFTWARE', description: 'Indicate the application and issue details.', defaultPriorityName: 'MEDIUM' },
+    { name: 'OTHER', description: 'Provide additional details for the request.', defaultPriorityName: 'LOW' }
   ];
 
   for (const t of ticketTypes) {
@@ -117,14 +117,14 @@ async function main() {
   const adminTypeId = findUserTypeId('ADMIN');
   const techTypeId = findUserTypeId('TECH');
   const requesterTypeId = findUserTypeId('REQUESTER');
-  if (!adminTypeId || !techTypeId || !requesterTypeId) throw new Error('User types base no creados.');
+  if (!adminTypeId || !techTypeId || !requesterTypeId) throw new Error('Base user types were not created.');
 
   const passwordHash = await bcrypt.hash('Admin123!', 10);
 
   const users = [
     { firstName: 'Admin', lastName: 'Principal', email: 'admin@local.test', userTypeId: adminTypeId },
-    { firstName: 'Lucía', lastName: 'Ops', email: 'tech1@local.test', userTypeId: techTypeId },
-    { firstName: 'Martín', lastName: 'Soporte', email: 'tech2@local.test', userTypeId: techTypeId },
+    { firstName: 'Lucia', lastName: 'Ops', email: 'tech1@local.test', userTypeId: techTypeId },
+    { firstName: 'Martin', lastName: 'Support', email: 'tech2@local.test', userTypeId: techTypeId },
     { firstName: 'Elena', lastName: 'Infra', email: 'tech3@local.test', userTypeId: techTypeId },
     { firstName: 'Diego', lastName: 'Apps', email: 'tech4@local.test', userTypeId: techTypeId },
     { firstName: 'Carla', lastName: 'QA', email: 'tech5@local.test', userTypeId: techTypeId },
@@ -152,14 +152,14 @@ async function main() {
   const requesters = allUsers.filter((u) => u.userTypeId === requesterTypeId);
   const ticketTypeRecords = await prisma.ticketType.findMany();
   if (!admins.length || !technicians.length || !requesters.length || !ticketTypeRecords.length) {
-    throw new Error('No hay datos base suficientes.');
+    throw new Error('Not enough base data found.');
   }
 
-  const openStatusPool = ['Nuevo', 'En progreso', 'En espera']
+  const openStatusPool = ['NEW', 'IN_PROGRESS', 'ON_HOLD']
     .map((name) => statusRecords.find((s) => s.name === name))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
-  const closedStatusPool = ['Resuelto', 'Cerrado']
+  const closedStatusPool = ['RESOLVED', 'CLOSED']
     .map((name) => statusRecords.find((s) => s.name === name))
     .filter((s): s is NonNullable<typeof s> => Boolean(s));
 
@@ -175,7 +175,7 @@ async function main() {
       data: {
         code: null,
         title: 'TEST',
-        description: `Ticket de ejemplo ${index + 1} para poblar métricas del dashboard.`,
+        description: `Sample ticket ${index + 1} to populate dashboard metrics.`,
         ticketTypeId: randomItem(ticketTypeRecords).id,
         priorityId: randomItem(priorityRecords).id,
         statusId: isResolved ? randomItem(closedStatusPool).id : randomItem(openStatusPool).id,
@@ -207,8 +207,8 @@ async function main() {
           ticketId: ticket.id,
           actorId: randomItem([...admins, ...technicians]).id,
           eventType: step === 0 ? 'CREATED' : 'STATUS_CHANGED',
-          message: step === 0 ? 'Ticket creado desde seed.' : 'Cambio de estado simulado.',
-          dataJson: step === 0 ? null : JSON.stringify({ from: 'Nuevo', to: isResolved ? 'Resuelto' : 'En progreso' }),
+          message: step === 0 ? 'Ticket created from seed.' : 'Simulated status change.',
+          dataJson: step === 0 ? null : JSON.stringify({ from: 'NEW', to: isResolved ? 'RESOLVED' : 'IN_PROGRESS' }),
           createdAt: eventAt
         }
       });
@@ -232,7 +232,7 @@ async function main() {
       data: {
         ticketId: t.id,
         requesterTechId: requesterTech.id,
-        message: 'Favor compartir capturas y pasos para reproducir.',
+        message: 'Please share screenshots and reproduction steps.',
         requestedFields: 'capturas,pasos,error',
         status: Math.random() < 0.5 ? 'OPEN' : 'CLOSED',
         createdAt: new Date(t.createdAt.getTime() + randomInt(60, 720) * 60 * 1000),
@@ -245,14 +245,14 @@ async function main() {
         data: {
           infoRequestId: request.id,
           responderId: randomItem(requesters).id,
-          message: 'Adjunto detalles y pasos solicitados.',
+          message: 'Sharing the requested details and steps.',
           createdAt: new Date(request.createdAt.getTime() + randomInt(20, 360) * 60 * 1000)
         }
       });
     }
   }
 
-  console.log(`Seed OK. Ejemplo: ${formatTicketCode(1)} - TEST`);
+  console.log(`Seed OK. Example: ${formatTicketCode(1)} - TEST`);
 }
 
 main()
