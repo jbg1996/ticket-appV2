@@ -4,11 +4,11 @@ import { SideBar } from './SideBar';
 import { TopBar } from './TopBar';
 import { getSidebarTheme } from '../utils/color';
 
-const HEADER_COLOR_STORAGE_KEY = 'headerColor';
+export const HEADER_COLOR_STORAGE_KEY = 'headerColor';
 const SIDEBAR_COLOR_STORAGE_KEY = 'sidebarColor';
-const APP_LOGO_STORAGE_KEY = 'appLogoUrl';
+export const APP_LOGO_STORAGE_KEY = 'appLogoUrl';
 const COMPANY_LOGO_STORAGE_KEY = 'companyLogoUrl';
-const DEFAULT_HEADER_COLOR = '#1f2937';
+export const DEFAULT_HEADER_COLOR = '#1f2937';
 const DEFAULT_SIDEBAR_COLOR = '#0f172a';
 
 export type LayoutContextValue = {
