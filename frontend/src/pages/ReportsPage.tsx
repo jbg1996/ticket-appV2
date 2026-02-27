@@ -123,7 +123,7 @@ export function ReportsPage() {
                     onChange={(event) => setStartDate(event.target.value)}
                   />
                   <label className="form__label" htmlFor="endDate">
-                    Fin
+                    End
                   </label>
                   <input id="endDate" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
                 </div>
