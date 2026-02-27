@@ -51,14 +51,50 @@ function normalizeHexColor(input?: string | null, fallback = '#9CA3AF'): string 
   return fallback;
 }
 
-function getContrastTextColor(bgHex: string): '#000000' | '#FFFFFF' {
-  const hex = bgHex.replace('#', '');
-  const full = hex.length === 3 ? hex.split('').map((ch) => ch + ch).join('') : hex;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? '#000000' : '#FFFFFF';
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((ch) => ch + ch).join('') : h;
+  return {
+    r: parseInt(full.slice(0, 2), 16),
+    g: parseInt(full.slice(2, 4), 16),
+    b: parseInt(full.slice(4, 6), 16)
+  };
+}
+
+function mixWithWhite(hex: string, amount = 0.82): string {
+  const { r, g, b } = hexToRgb(hex);
+  const nr = Math.round(r + (255 - r) * amount);
+  const ng = Math.round(g + (255 - g) * amount);
+  const nb = Math.round(b + (255 - b) * amount);
+  return `rgb(${nr}, ${ng}, ${nb})`;
+}
+
+function getContrastTextColor(bgHexOrRgb: string): '#111827' | '#FFFFFF' {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (bgHexOrRgb.startsWith('rgb')) {
+    const m = bgHexOrRgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (m) {
+      r = +m[1];
+      g = +m[2];
+      b = +m[3];
+    }
+  } else {
+    const rgb = hexToRgb(bgHexOrRgb);
+    r = rgb.r;
+    g = rgb.g;
+    b = rgb.b;
+  }
+
+  const srgb = [r, g, b].map((v) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+
+  const L = 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  return L > 0.55 ? '#111827' : '#FFFFFF';
 }
 
 export function TicketsPage() {
@@ -528,14 +564,21 @@ export function TicketsPage() {
                 <td>
                   {(() => {
                     const priorityName = ticket.priority?.name;
-                    const bg = normalizeHexColor(ticket.priority?.color);
-                    const fg = getContrastTextColor(bg);
+                    const rawColor = normalizeHexColor(ticket.priority?.color);
+                    const bg = mixWithWhite(rawColor, 0.86);
+                    const ring = mixWithWhite(rawColor, 0.65);
+                    const text = getContrastTextColor(bg);
                     return (
                       <span
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-                        style={{ backgroundColor: bg, color: fg }}
-                        title={priorityName ?? 'No priority'}
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ring-1 ring-inset"
+                        style={{ backgroundColor: bg, color: text, border: `1px solid ${ring}` }}
+                        title={priorityName ?? '—'}
                       >
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: rawColor }}
+                          aria-hidden="true"
+                        />
                         {priorityName ? ticketPriorityLabel(priorityName) : '—'}
                       </span>
                     );
