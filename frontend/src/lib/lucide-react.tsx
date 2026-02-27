@@ -270,3 +270,46 @@ export function Paperclip(props: IconProps) {
     </svg>
   );
 }
+
+
+export function Mail(props: IconProps) {
+  const { size, ...rest } = props;
+  return (
+    <svg
+      {...rest}
+      width={size ?? rest.width}
+      height={size ?? rest.height}
+      viewBox={rest.viewBox ?? '0 0 24 24'}
+      fill={rest.fill ?? 'none'}
+      stroke={rest.stroke ?? 'currentColor'}
+      strokeWidth={rest.strokeWidth ?? 2}
+      strokeLinecap={rest.strokeLinecap ?? 'round'}
+      strokeLinejoin={rest.strokeLinejoin ?? 'round'}
+      aria-hidden={rest['aria-hidden'] ?? true}
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <polyline points="3 7 12 13 21 7" />
+    </svg>
+  );
+}
+
+export function Lock(props: IconProps) {
+  const { size, ...rest } = props;
+  return (
+    <svg
+      {...rest}
+      width={size ?? rest.width}
+      height={size ?? rest.height}
+      viewBox={rest.viewBox ?? '0 0 24 24'}
+      fill={rest.fill ?? 'none'}
+      stroke={rest.stroke ?? 'currentColor'}
+      strokeWidth={rest.strokeWidth ?? 2}
+      strokeLinecap={rest.strokeLinecap ?? 'round'}
+      strokeLinejoin={rest.strokeLinejoin ?? 'round'}
+      aria-hidden={rest['aria-hidden'] ?? true}
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
