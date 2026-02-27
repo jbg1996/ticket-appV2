@@ -17,7 +17,7 @@ type Ticket = {
   createdAt: string;
   updatedAt: string;
   status: { id: number; name: string; color?: string | null };
-  priority: { id: number; name: string };
+  priority: { id: number; name: string; color?: string | null };
   ticketType: { id: number; name: string; description: string; defaultPriorityId: number };
   createdBy?: { id: number; firstName: string; lastName: string } | null;
   assignedTo?: { id: number; firstName: string; lastName: string } | null;
@@ -42,6 +42,24 @@ type ColumnDefinition = {
 const formatDate = (value: string) => new Date(value).toLocaleString();
 const formatTicketDisplayName = (ticket: Pick<Ticket, 'code' | 'title'>) =>
   ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title;
+
+function normalizeHexColor(input?: string | null, fallback = '#9CA3AF'): string {
+  if (!input) return fallback;
+  const c = input.trim();
+  const withHash = c.startsWith('#') ? c : `#${c}`;
+  if (/^#([0-9a-fA-F]{3}){1,2}$/.test(withHash)) return withHash;
+  return fallback;
+}
+
+function getContrastTextColor(bgHex: string): '#000000' | '#FFFFFF' {
+  const hex = bgHex.replace('#', '');
+  const full = hex.length === 3 ? hex.split('').map((ch) => ch + ch).join('') : hex;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#000000' : '#FFFFFF';
+}
 
 export function TicketsPage() {
   const { user } = useAuth();
@@ -507,7 +525,22 @@ export function TicketsPage() {
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
                 <td>{ticketStatusLabel(ticket.status.name)}</td>
-                <td>{ticketPriorityLabel(ticket.priority.name)}</td>
+                <td>
+                  {(() => {
+                    const priorityName = ticket.priority?.name;
+                    const bg = normalizeHexColor(ticket.priority?.color);
+                    const fg = getContrastTextColor(bg);
+                    return (
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                        style={{ backgroundColor: bg, color: fg }}
+                        title={priorityName ?? 'No priority'}
+                      >
+                        {priorityName ? ticketPriorityLabel(priorityName) : '—'}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td>{ticketTypeLabel(ticket.ticketType.name)}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
                 <td>{formatDate(ticket.updatedAt)}</td>
