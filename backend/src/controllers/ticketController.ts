@@ -144,7 +144,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
     where,
     include: {
       ticketType: true,
-      priority: true,
+      priority: { select: { id: true, name: true, color: true } },
       status: true,
       createdBy: { select: { id: true, firstName: true, lastName: true } },
       assignedTo: { select: { id: true, firstName: true, lastName: true } }
