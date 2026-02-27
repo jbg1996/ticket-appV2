@@ -61,7 +61,12 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-function mixWithWhite(hex: string, amount = 0.82): string {
+function rgbaFromHex(hex: string, alpha: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function mixWithWhite(hex: string, amount = 0.9): string {
   const { r, g, b } = hexToRgb(hex);
   const nr = Math.round(r + (255 - r) * amount);
   const ng = Math.round(g + (255 - g) * amount);
@@ -69,32 +74,27 @@ function mixWithWhite(hex: string, amount = 0.82): string {
   return `rgb(${nr}, ${ng}, ${nb})`;
 }
 
-function getContrastTextColor(bgHexOrRgb: string): '#111827' | '#FFFFFF' {
-  let r = 0;
-  let g = 0;
-  let b = 0;
-
-  if (bgHexOrRgb.startsWith('rgb')) {
-    const m = bgHexOrRgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    if (m) {
-      r = +m[1];
-      g = +m[2];
-      b = +m[3];
-    }
-  } else {
-    const rgb = hexToRgb(bgHexOrRgb);
-    r = rgb.r;
-    g = rgb.g;
-    b = rgb.b;
-  }
-
-  const srgb = [r, g, b].map((v) => {
+function getRelativeLuminance(rgb: { r: number; g: number; b: number }): number {
+  const toLinear = (v: number) => {
     const c = v / 255;
     return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
+  };
+  const R = toLinear(rgb.r);
+  const G = toLinear(rgb.g);
+  const B = toLinear(rgb.b);
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
 
-  const L = 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+function getContrastTextColorForSolid(hex: string): '#111827' | '#FFFFFF' {
+  const L = getRelativeLuminance(hexToRgb(hex));
   return L > 0.55 ? '#111827' : '#FFFFFF';
+}
+
+function getTextColorForTint(tintRgbString: string): '#111827' | '#FFFFFF' {
+  const m = tintRgbString.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!m) return getContrastTextColorForSolid('#9CA3AF');
+  const L = getRelativeLuminance({ r: +m[1], g: +m[2], b: +m[3] });
+  return L > 0.65 ? '#111827' : '#FFFFFF';
 }
 
 export function TicketsPage() {
@@ -561,25 +561,38 @@ export function TicketsPage() {
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
                 <td>{ticketStatusLabel(ticket.status.name)}</td>
-                <td>
+                <td className="py-2">
                   {(() => {
-                    const priorityName = ticket.priority?.name;
-                    const rawColor = normalizeHexColor(ticket.priority?.color);
-                    const bg = mixWithWhite(rawColor, 0.86);
-                    const ring = mixWithWhite(rawColor, 0.65);
-                    const text = getContrastTextColor(bg);
+                    const p = ticket.priority;
+                    const name = p?.name ?? '—';
+                    const raw = normalizeHexColor(p?.color);
+
+                    const bg = mixWithWhite(raw, 0.92);
+                    const ring = rgbaFromHex(raw, 0.28);
+                    const dot = raw;
+                    const solidText = getContrastTextColorForSolid(raw);
+                    const text = getTextColorForTint(bg) === '#111827' ? '#111827' : solidText;
+
                     return (
                       <span
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ring-1 ring-inset"
-                        style={{ backgroundColor: bg, color: text, border: `1px solid ${ring}` }}
-                        title={priorityName ?? '—'}
+                        className="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[12px] font-semibold leading-none whitespace-nowrap"
+                        style={{
+                          backgroundColor: bg,
+                          color: text,
+                          boxShadow: '0 1px 0 rgba(0,0,0,0.04)',
+                          border: `1px solid ${ring}`
+                        }}
+                        title={name}
                       >
                         <span
                           className="inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: rawColor }}
+                          style={{
+                            backgroundColor: dot,
+                            boxShadow: `0 0 0 2px ${rgbaFromHex(raw, 0.12)}`
+                          }}
                           aria-hidden="true"
                         />
-                        {priorityName ? ticketPriorityLabel(priorityName) : '—'}
+                        {name !== '—' ? ticketPriorityLabel(name) : '—'}
                       </span>
                     );
                   })()}
