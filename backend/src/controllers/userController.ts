@@ -72,14 +72,16 @@ export async function updateUser(req: Request, res: Response) {
   if (hasDisallowedProfileImageFields(req.body as Record<string, unknown>)) {
     return res.status(400).json({ message: 'Profile photo cannot be updated from this endpoint.' });
   }
-  const { firstName, lastName, phone, userTypeId, isActive } = req.body as {
+  const { firstName, lastName, phone, userTypeId, isActive, password } = req.body as {
     firstName?: string;
     lastName?: string;
     phone?: string;
     userTypeId?: number;
     isActive?: boolean;
+    password?: string;
   };
-  if (!firstName && !lastName && !phone && !userTypeId && typeof isActive === 'undefined') {
+  const hasPassword = typeof password === 'string' && password.trim().length > 0;
+  if (!firstName && !lastName && !phone && !userTypeId && typeof isActive === 'undefined' && !hasPassword) {
     return res.status(400).json({ message: 'Provide fields to update.' });
   }
   const existing = await prisma.user.findUnique({ where: { id: parsedId } });
@@ -96,9 +98,18 @@ export async function updateUser(req: Request, res: Response) {
       return res.status(400).json({ message: 'Invalid user type.' });
     }
   }
+  const newPassword = hasPassword ? password.trim() : undefined;
+  if (newPassword) {
+    const passwordValidation = validatePasswordPolicy(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({ message: passwordValidation.message });
+    }
+  }
+
+  const passwordHash = newPassword ? await bcrypt.hash(newPassword, 10) : undefined;
   const user = await prisma.user.update({
     where: { id: parsedId },
-    data: { firstName, lastName, phone, userTypeId: parsedUserTypeId, isActive }
+    data: { firstName, lastName, phone, userTypeId: parsedUserTypeId, isActive, passwordHash }
   });
   console.info('Updated user', { id: parsedId });
   res.json(user);
