@@ -17,6 +17,15 @@ export function UsersPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const validatePassword = (password: string) => {
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must include at least one lowercase letter.';
+    if (!/\d/.test(password)) return 'Password must include at least one number.';
+    if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include at least one special character.';
+    return '';
+  };
+
   const loadUsers = () => {
     getUsers()
       .then((data) => setUsers(data as User[]))
@@ -30,6 +39,64 @@ export function UsersPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  const handleCreateUser = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      if (!newUser.userTypeId) {
+        throw new Error('Select a role for the user.');
+      }
+      const passwordValidationError = validatePassword(newUser.password);
+      if (passwordValidationError) {
+        throw new Error(passwordValidationError);
+      }
+      await createUser({ ...newUser, phone: newUser.phone || undefined, userTypeId: Number(newUser.userTypeId) });
+      setNewUser({ firstName: '', lastName: '', email: '', password: '', phone: '', userTypeId: '' });
+      loadUsers();
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditStart = (user: User) => {
+    setEditingUserId(user.id);
+    setEditUser({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone ?? '',
+      userTypeId: user.userType.id,
+      isActive: user.isActive
+    });
+  };
+
+  const handleEditCancel = () => {
+    setEditingUserId(null);
+    setEditUser({ firstName: '', lastName: '', phone: '', userTypeId: '', isActive: true });
+  };
+
+  const handleEditSave = async () => {
+    if (!editingUserId) return;
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      await updateUser(editingUserId, {
+        firstName: editUser.firstName,
+        lastName: editUser.lastName,
+        phone: editUser.phone || undefined,
+        userTypeId: editUser.userTypeId ? Number(editUser.userTypeId) : undefined,
+        isActive: editUser.isActive
+      });
+      handleEditCancel();
+      loadUsers();
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async (userId: number) => {
     setLoading(true);

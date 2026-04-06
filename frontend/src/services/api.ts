@@ -91,6 +91,10 @@ export type ChangePasswordPayload = {
   currentPassword: string;
   newPassword: string;
 };
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
 
 export type TicketTypePayload = { name: string; description: string; defaultPriorityId: number };
 export type PriorityPayload = { name: string; color: string };

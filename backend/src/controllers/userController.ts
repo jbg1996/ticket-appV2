@@ -72,7 +72,7 @@ export async function updateUser(req: Request, res: Response) {
   if (hasDisallowedProfileImageFields(req.body as Record<string, unknown>)) {
     return res.status(400).json({ message: 'Profile photo cannot be updated from this endpoint.' });
   }
-  const { firstName, lastName, phone, userTypeId, isActive, password } = req.body as {
+  const { firstName, lastName, phone, userTypeId, isActive } = req.body as {
     firstName?: string;
     lastName?: string;
     phone?: string;
