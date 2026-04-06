@@ -40,8 +40,6 @@ const getDayBucketExpression = (columnName: 'createdAt' | 'resolvedAt') =>
 const getBucketExpression = (columnName: 'createdAt' | 'resolvedAt', granularity: DashboardGranularity) => {
   const dayBucketExpression = getDayBucketExpression(columnName);
   if (granularity === 'week') {
-    // SQLite has no native ISO week bucket. We group by the Monday date for the week,
-    // and expose that normalized day string as the API `date` field.
     return Prisma.sql`date(${dayBucketExpression}, '-' || ((cast(strftime('%w', ${dayBucketExpression}) as integer) + 6) % 7) || ' days')`;
   }
   return dayBucketExpression;
@@ -103,8 +101,6 @@ export async function getDashboardSummary(filters: DashboardFilters) {
   const startMs = start.getTime();
   const endMs = end.getTime();
 
-  // NOTE: SQLite + Prisma groupBy does not support truncating DateTime to day/week.
-  // We use raw SQL with date()/strftime() to aggregate calendar buckets directly in SQLite.
   const createdBucketExpression = getBucketExpression('createdAt', granularity);
   const resolvedBucketExpression = getBucketExpression('resolvedAt', granularity);
 
@@ -313,7 +309,6 @@ export async function getDashboardSummary(filters: DashboardFilters) {
     ? toSafeHours(mttrDurationsHours.reduce((acc, hours) => acc + hours, 0) / mttrDurationsHours.length)
     : 0;
 
-  // NOTE: Same SQLite limitation as above. We need $queryRaw for bucketed averages by day/week.
   const mttrRows = await prisma.$queryRaw<MttrRow[]>(Prisma.sql`
     SELECT ${resolvedBucketExpression} AS bucket,
            AVG(("resolvedAt" - "createdAt") / 3600000.0) AS mttrHours

@@ -122,7 +122,7 @@ async function main() {
   const passwordHash = await bcrypt.hash('Admin123!', 10);
 
   const users = [
-    { firstName: 'Admin', lastName: 'Principal', email: 'admin@local.test', userTypeId: adminTypeId },
+    { firstName: 'Admin', lastName: 'Admin', email: 'admin@local.test', userTypeId: adminTypeId },
     { firstName: 'Lucia', lastName: 'Ops', email: 'tech1@local.test', userTypeId: techTypeId },
     { firstName: 'Martin', lastName: 'Support', email: 'tech2@local.test', userTypeId: techTypeId },
     { firstName: 'Elena', lastName: 'Infra', email: 'tech3@local.test', userTypeId: techTypeId },
