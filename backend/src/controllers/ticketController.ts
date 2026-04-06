@@ -14,10 +14,16 @@ import {
   TICKET_TYPE
 } from '../constants/ticketCanon.js';
 import { buildTicketWhere, isTicketViewKey, isViewAllowedForRole } from '../constants/ticketViews.js';
+import { applyResolvedTicketAutoClosure } from '../services/ticketLifecycleService.js';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+const runTicketLifecycleMaintenance = async () => {
+  await applyResolvedTicketAutoClosure();
+};
+
 export async function listTickets(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   const {
     statusId,
     status,
@@ -163,6 +169,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
 }
 
 export async function searchTickets(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   const query = (req.query.q as string) ?? '';
   const limit = Number(req.query.limit) || 8;
   if (!query || query.trim().length < 2) {
@@ -195,6 +202,7 @@ export async function searchTickets(req: AuthRequest, res: Response) {
 }
 
 export async function listRecentTickets(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -220,6 +228,7 @@ export async function listRecentTickets(req: AuthRequest, res: Response) {
 }
 
 export async function getTicket(req: Request, res: Response) {
+  await runTicketLifecycleMaintenance();
   const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
@@ -309,6 +318,7 @@ export async function createTicket(req: AuthRequest, res: Response) {
 }
 
 export async function updateTicket(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -360,6 +370,7 @@ export async function updateTicket(req: AuthRequest, res: Response) {
 }
 
 export async function assignTicket(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -387,6 +398,7 @@ export async function assignTicket(req: AuthRequest, res: Response) {
 }
 
 export async function changeStatus(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -412,11 +424,18 @@ export async function changeStatus(req: AuthRequest, res: Response) {
   if (!allowed.includes(nextStatus)) {
     return res.status(400).json({ message: `Cannot move from ${currentStatus} to ${nextStatus}.` });
   }
+  const resolvedAtUpdate =
+    nextStatus === TICKET_STATUS.RESOLVED
+      ? new Date()
+      : currentStatus === TICKET_STATUS.RESOLVED
+        ? null
+        : undefined;
+
   const ticket = await prisma.ticket.update({
     where: { id: parsedId },
     data: {
       statusId: parsedStatusId,
-      resolvedAt: nextStatus === TICKET_STATUS.RESOLVED ? new Date() : undefined,
+      resolvedAt: resolvedAtUpdate,
       updatedById: req.user.id
     }
   });
@@ -431,6 +450,7 @@ export async function changeStatus(req: AuthRequest, res: Response) {
 }
 
 export async function requestInfo(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -458,6 +478,7 @@ export async function requestInfo(req: AuthRequest, res: Response) {
 }
 
 export async function respondInfo(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -504,6 +525,7 @@ export async function respondInfo(req: AuthRequest, res: Response) {
 }
 
 export async function deleteTicket(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -535,6 +557,7 @@ export async function deleteTicket(req: AuthRequest, res: Response) {
 }
 
 export async function deleteTicketsBulk(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
@@ -581,6 +604,7 @@ export async function deleteTicketsBulk(req: AuthRequest, res: Response) {
 }
 
 export async function addComment(req: AuthRequest, res: Response) {
+  await runTicketLifecycleMaintenance();
   if (!req.user) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
