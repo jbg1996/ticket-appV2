@@ -85,6 +85,11 @@ export type UpdateUserPayload = {
   phone?: string;
   userTypeId?: number;
   isActive?: boolean;
+  password?: string;
+};
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
 };
 export type ChangePasswordPayload = {
   currentPassword: string;

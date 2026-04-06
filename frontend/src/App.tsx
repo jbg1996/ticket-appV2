@@ -14,6 +14,8 @@ import { HomePage } from './pages/HomePage';
 import { RecentTicketsPage } from './pages/RecentTicketsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
+import { CreateUserPage } from './pages/CreateUserPage';
+import { EditUserPage } from './pages/EditUserPage';
 import { TablesPage } from './pages/TablesPage';
 import { AppSettingsPage } from './pages/AppSettingsPage';
 import { apiFetch } from './services/api';
@@ -77,6 +79,8 @@ function AppShell() {
             }
           >
             <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/admin/users/new" element={<CreateUserPage />} />
+            <Route path="/admin/users/:id/edit" element={<EditUserPage />} />
             <Route path="/admin/tables" element={<TablesPage />} />
             <Route path="/admin/app" element={<AppSettingsPage />} />
           </Route>
