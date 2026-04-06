@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { apiFetch } from '../services/api';
 import { ticketPriorityLabel, ticketStatusLabel, ticketTypeLabel } from '../constants/ticketLabels';
 import { useAuth } from '../components/AuthProvider';
@@ -17,7 +17,7 @@ type Ticket = {
   createdAt: string;
   updatedAt: string;
   status: { id: number; name: string; color?: string | null };
-  priority: { id: number; name: string };
+  priority: { id: number; name: string; color?: string | null };
   ticketType: { id: number; name: string; description: string; defaultPriorityId: number };
   createdBy?: { id: number; firstName: string; lastName: string } | null;
   assignedTo?: { id: number; firstName: string; lastName: string } | null;
@@ -42,6 +42,104 @@ type ColumnDefinition = {
 const formatDate = (value: string) => new Date(value).toLocaleString();
 const formatTicketDisplayName = (ticket: Pick<Ticket, 'code' | 'title'>) =>
   ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title;
+
+function normalizeHexColor(input?: string | null, fallback = '#9CA3AF'): string {
+  if (!input) return fallback;
+  const c = input.trim();
+  const withHash = c.startsWith('#') ? c : `#${c}`;
+  if (/^#([0-9a-fA-F]{3}){1,2}$/.test(withHash)) return withHash;
+  return fallback;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((ch) => ch + ch).join('') : h;
+  return {
+    r: parseInt(full.slice(0, 2), 16),
+    g: parseInt(full.slice(2, 4), 16),
+    b: parseInt(full.slice(4, 6), 16)
+  };
+}
+
+function mixWithWhite(hex: string, amount = 0.9): string {
+  const { r, g, b } = hexToRgb(hex);
+  const nr = Math.round(r + (255 - r) * amount);
+  const ng = Math.round(g + (255 - g) * amount);
+  const nb = Math.round(b + (255 - b) * amount);
+  return `rgb(${nr}, ${ng}, ${nb})`;
+}
+
+function rgbaFromHex(hex: string, alpha: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function darkenHex(hex: string, amount = 0.45): string {
+  const { r, g, b } = hexToRgb(hex);
+  const nr = Math.round(r * (1 - amount));
+  const ng = Math.round(g * (1 - amount));
+  const nb = Math.round(b * (1 - amount));
+  return `rgb(${nr}, ${ng}, ${nb})`;
+}
+
+function renderPriorityPill(label: string, color?: string | null) {
+  const raw = normalizeHexColor(color);
+  const bg = mixWithWhite(raw, 0.90);
+  const border = rgbaFromHex(raw, 0.30);
+  const text = darkenHex(raw, 0.50);
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        borderRadius: 9999,
+        padding: '6px 10px',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 0.2,
+        lineHeight: 1,
+        backgroundColor: bg,
+        border: `1px solid ${border}`,
+        boxSizing: 'border-box',
+        whiteSpace: 'nowrap',
+        color: text
+      }}
+      title={label}
+    >
+      {ticketPriorityLabel(label)}
+    </div>
+  );
+}
+
+function renderStatusDot(label: string, color?: string | null) {
+  const raw = normalizeHexColor(color);
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 10,
+        whiteSpace: 'nowrap'
+      }}
+      title={label}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 9,
+          height: 9,
+          borderRadius: 9999,
+          backgroundColor: raw,
+          boxShadow: `0 0 0 3px ${rgbaFromHex(raw, 0.12)}`,
+          flex: '0 0 auto'
+        }}
+      />
+      <span style={{ fontSize: 13, fontWeight: 500 }}>{label}</span>
+    </div>
+  );
+}
 
 export function TicketsPage() {
   const { user } = useAuth();
@@ -77,19 +175,14 @@ export function TicketsPage() {
         page: nextPage.toString(),
         pageSize: nextPageSize.toString()
       });
-      if (searchValue.trim()) {
-        params.set('text', searchValue.trim());
-      }
-      if (view) {
-        params.set('view', view);
-      }
+      if (searchValue.trim()) params.set('text', searchValue.trim());
+      if (view) params.set('view', view);
+
       const response = await apiFetch<PaginatedTicketsResponse>(`/api/tickets?${params.toString()}`);
       setTickets(response.data);
       setTotal(response.total);
       setTotalPages(response.totalPages);
-      if (response.page !== nextPage) {
-        setPage(response.page);
-      }
+      if (response.page !== nextPage) setPage(response.page);
     } catch {
       setTickets([]);
       setTotal(0);
@@ -103,9 +196,7 @@ export function TicketsPage() {
   useEffect(() => {
     if (!user?.role) return;
     const defaultView = DEFAULT_TICKET_VIEW_BY_ROLE[user.role];
-    if (selectedView === null) {
-      setSelectedView(defaultView);
-    }
+    if (selectedView === null) setSelectedView(defaultView);
   }, [user?.role, selectedView]);
 
   useEffect(() => {
@@ -140,15 +231,20 @@ export function TicketsPage() {
   );
 
   const columnMap = useMemo(
-    () => columnDefinitions.reduce((acc, column) => ({ ...acc, [column.id]: column }), {} as Record<string, ColumnDefinition>),
+    () =>
+      columnDefinitions.reduce(
+        (acc, column) => ({ ...acc, [column.id]: column }),
+        {} as Record<string, ColumnDefinition>
+      ),
     [columnDefinitions]
   );
 
-
-
   const normalizeValue = (value: string | number | null | undefined) => (value ?? '').toString().toLowerCase();
 
-  const matchesTextFilter = (value: string | number | null | undefined, filter: Extract<ColumnFilter, { kind: 'text' }>) => {
+  const matchesTextFilter = (
+    value: string | number | null | undefined,
+    filter: Extract<ColumnFilter, { kind: 'text' }>
+  ) => {
     const normalized = normalizeValue(value);
     const filterValue = filter.value.toLowerCase();
     switch (filter.op) {
@@ -226,7 +322,10 @@ export function TicketsPage() {
     }
   };
 
-  const matchesDateFilter = (value: string | number | null | undefined, filter: Extract<ColumnFilter, { kind: 'date' }>) => {
+  const matchesDateFilter = (
+    value: string | number | null | undefined,
+    filter: Extract<ColumnFilter, { kind: 'date' }>
+  ) => {
     if (!value) return false;
     const timestamp = Date.parse(value.toString());
     if (Number.isNaN(timestamp)) return false;
@@ -257,12 +356,10 @@ export function TicketsPage() {
     Object.entries(columnFilters).forEach(([columnId, filter]) => {
       const column = columnMap[columnId];
       if (!column) return;
-      if (filter.kind === 'date') {
-        result = result.filter((ticket) => matchesDateFilter(column.accessor(ticket), filter));
-      } else {
-        result = result.filter((ticket) => matchesTextFilter(column.accessor(ticket), filter));
-      }
+      if (filter.kind === 'date') result = result.filter((ticket) => matchesDateFilter(column.accessor(ticket), filter));
+      else result = result.filter((ticket) => matchesTextFilter(column.accessor(ticket), filter));
     });
+
     if (sorting) {
       const column = columnMap[sorting.columnId];
       if (column) {
@@ -275,6 +372,7 @@ export function TicketsPage() {
         });
       }
     }
+
     return result;
   };
 
@@ -289,14 +387,9 @@ export function TicketsPage() {
     selectAllRef.current.indeterminate = hasSelection && !allVisibleSelected;
   }, [selectedIds, allVisibleSelected]);
 
-  const handleToggleColumn = (columnId: string) => {
-    setOpenColumnId((prev) => (prev === columnId ? null : columnId));
-  };
-
-  const handleApplyFilter = (columnId: string, filter: ColumnFilter) => {
+  const handleToggleColumn = (columnId: string) => setOpenColumnId((prev) => (prev === columnId ? null : columnId));
+  const handleApplyFilter = (columnId: string, filter: ColumnFilter) =>
     setColumnFilters((prev) => ({ ...prev, [columnId]: filter }));
-  };
-
   const handleClearFilter = (columnId: string) => {
     setColumnFilters((prev) => {
       const next = { ...prev };
@@ -304,31 +397,16 @@ export function TicketsPage() {
       return next;
     });
   };
-
   const handleSort = (columnId: string, direction: 'asc' | 'desc') => {
     setSorting({ columnId, direction });
     setOpenColumnId(null);
   };
 
-  const renderColumnTrigger = (columnId: string, label: string) => {
-    const isChevronColumn = ['title', 'status', 'priority', 'type'].includes(columnId);
-    if (!isChevronColumn) return undefined;
-    return ({ onToggle, label: triggerLabel }: { onToggle: () => void; label: string; isOpen: boolean }) => (
-      <button type="button" className="thButton" onClick={onToggle}>
-        <span>{triggerLabel}</span>
-        <ChevronDown size={14} className="thChevron" />
-      </button>
-    );
-  };
-
   const handleSelectAll = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (allVisibleSelected) {
-        visibleIds.forEach((id) => next.delete(id));
-      } else {
-        visibleIds.forEach((id) => next.add(id));
-      }
+      if (allVisibleSelected) visibleIds.forEach((id) => next.delete(id));
+      else visibleIds.forEach((id) => next.add(id));
       return next;
     });
   };
@@ -336,11 +414,8 @@ export function TicketsPage() {
   const handleSelectRow = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -348,6 +423,7 @@ export function TicketsPage() {
   const handleDelete = async () => {
     if (!isAdmin || selectedIds.size === 0) return;
     if (!confirm('Delete the selected tickets?')) return;
+
     setActionLoading(true);
     setFeedback('');
     try {
@@ -376,10 +452,7 @@ export function TicketsPage() {
       };
       await apiFetch('/api/reports', {
         method: 'POST',
-        body: JSON.stringify({
-          source: 'tickets',
-          ticketQuery
-        })
+        body: JSON.stringify({ source: 'tickets', ticketQuery })
       });
       setFeedback('Report requested.');
     } catch (err) {
@@ -392,10 +465,12 @@ export function TicketsPage() {
   return (
     <div className="page">
       <h2>Tickets</h2>
+
       <div className="card tickets-card" style={{ marginTop: '16px' }}>
         <div className="tickets-card__header">
           <h3>{allowedViews.find((view) => view.key === selectedView)?.label ?? 'Tickets'}</h3>
         </div>
+
         <div className="tickets-toolbar">
           <div className="tickets-toolbar__view">
             <label htmlFor="ticket-view-select">View</label>
@@ -415,6 +490,7 @@ export function TicketsPage() {
               ))}
             </select>
           </div>
+
           <input
             className="tickets-toolbar__search"
             placeholder="Search tickets..."
@@ -424,6 +500,7 @@ export function TicketsPage() {
               setPage(1);
             }}
           />
+
           <div className="tickets-toolbar__actions">
             <button type="button" className="tickets-toolbar__button" onClick={() => navigate('/tickets/new')}>
               <span className="btnInner">
@@ -431,6 +508,7 @@ export function TicketsPage() {
                 <span>New</span>
               </span>
             </button>
+
             {isAdmin ? (
               <button
                 type="button"
@@ -444,6 +522,7 @@ export function TicketsPage() {
                 </span>
               </button>
             ) : null}
+
             <button
               type="button"
               className="tickets-toolbar__button secondary"
@@ -457,8 +536,10 @@ export function TicketsPage() {
             </button>
           </div>
         </div>
+
         {feedback ? <p className="form-error">{feedback}</p> : null}
         {loadError ? <p className="form-error">{loadError}</p> : null}
+
         <table className="table">
           <thead>
             <tr>
@@ -471,6 +552,7 @@ export function TicketsPage() {
                   aria-label="Select all visible tickets"
                 />
               </th>
+
               {columnDefinitions.map((column) => (
                 <th key={column.id}>
                   <ColumnMenu
@@ -492,6 +574,7 @@ export function TicketsPage() {
               ))}
             </tr>
           </thead>
+
           <tbody>
             {displayTickets.map((ticket) => (
               <tr key={ticket.id}>
@@ -503,11 +586,19 @@ export function TicketsPage() {
                     aria-label={`Select ticket ${formatTicketDisplayName(ticket)}`}
                   />
                 </td>
+
                 <td>
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
-                <td>{ticketStatusLabel(ticket.status.name)}</td>
-                <td>{ticketPriorityLabel(ticket.priority.name)}</td>
+
+                <td style={{ paddingTop: 8, paddingBottom: 8 }}>
+                  {renderStatusDot(ticketStatusLabel(ticket.status.name), ticket.status.color)}
+                </td>
+
+                <td style={{ paddingTop: 8, paddingBottom: 8 }}>
+                  {renderPriorityPill(ticket.priority?.name ?? '—', ticket.priority?.color)}
+                </td>
+
                 <td>{ticketTypeLabel(ticket.ticketType.name)}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
                 <td>{formatDate(ticket.updatedAt)}</td>
@@ -515,6 +606,7 @@ export function TicketsPage() {
                 <td>{ticket.assignedTo ? `${ticket.assignedTo.firstName} ${ticket.assignedTo.lastName}` : 'Unassigned'}</td>
               </tr>
             ))}
+
             {displayTickets.length === 0 && (
               <tr>
                 <td colSpan={9}>No tickets match those filters.</td>
@@ -522,10 +614,10 @@ export function TicketsPage() {
             )}
           </tbody>
         </table>
+
         <div className="tickets-pagination" aria-label="Ticket pagination controls">
-          <span className="tickets-pagination__summary">
-            {isLoading ? 'Loading tickets...' : `${total} tickets`}
-          </span>
+          <span className="tickets-pagination__summary">{isLoading ? 'Loading tickets...' : `${total} tickets`}</span>
+
           <div className="tickets-pagination__controls">
             <div className="tickets-pagination__page-size">
               <label htmlFor="tickets-page-size">Rows</label>
@@ -542,12 +634,20 @@ export function TicketsPage() {
                 <option value={50}>50</option>
               </select>
             </div>
-            <button type="button" className="tickets-toolbar__button secondary" onClick={() => setPage((prev) => prev - 1)} disabled={page <= 1 || isLoading}>
+
+            <button
+              type="button"
+              className="tickets-toolbar__button secondary"
+              onClick={() => setPage((prev) => prev - 1)}
+              disabled={page <= 1 || isLoading}
+            >
               Previous
             </button>
+
             <span>
               Page {page} of {totalPages}
             </span>
+
             <button
               type="button"
               className="tickets-toolbar__button secondary"

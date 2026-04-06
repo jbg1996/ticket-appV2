@@ -16,8 +16,8 @@ function getStoredSetting(key: string): string | null {
 export function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@local.test');
-  const [password, setPassword] = useState('Admin123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLogoVisible, setIsLogoVisible] = useState(true);
   const [headerColor, setHeaderColor] = useState(DEFAULT_HEADER_COLOR);

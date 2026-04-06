@@ -1,7 +1,7 @@
 # Ticket Management App (Full Stack)
 
 Monorepo with:
-- `/backend` (Node.js + Express + TypeScript + Prisma v7 + SQLite)
+- `/backend` (Node.js + Express + TypeScript + Prisma v6 + SQLite)
 - `/frontend` (React + TypeScript + Vite)
 
 ## Prerequisites
