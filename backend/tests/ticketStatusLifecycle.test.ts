@@ -27,7 +27,7 @@ const createTicket = async ({
     data: {
       ticketTypeId,
       title: `Lifecycle ${Date.now()}`,
-      description: 'Lifecycle test ticket',
+      description: 'Lifecycle Test ticket',
       priorityId,
       statusId: statusIds[statusName],
       createdById: adminUserId,
