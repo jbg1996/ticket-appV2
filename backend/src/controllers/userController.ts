@@ -2,6 +2,13 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma/client.js';
 import { parseId, parseOptionalId } from '../utils/parseId.js';
+import { validatePasswordPolicy } from '../utils/passwordPolicy.js';
+
+const DISALLOWED_PROFILE_IMAGE_FIELDS = ['profilePhoto', 'avatar', 'image', 'imageUrl', 'photoUrl'] as const;
+
+function hasDisallowedProfileImageFields(payload: Record<string, unknown>) {
+  return DISALLOWED_PROFILE_IMAGE_FIELDS.some((fieldName) => Object.prototype.hasOwnProperty.call(payload, fieldName));
+}
 
 export async function listUsers(_req: Request, res: Response) {
   const users = await prisma.user.findMany({ include: { userType: true } });
@@ -37,8 +44,9 @@ export async function createUser(req: Request, res: Response) {
   if (!parsedUserTypeId) {
     return res.status(400).json({ message: 'Invalid user type.' });
   }
-  if (password.length < 6) {
-    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  const passwordValidation = validatePasswordPolicy(password);
+  if (!passwordValidation.isValid) {
+    return res.status(400).json({ message: passwordValidation.message });
   }
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -60,6 +68,9 @@ export async function updateUser(req: Request, res: Response) {
   const parsedId = parseId(req.params.id);
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid user id.' });
+  }
+  if (hasDisallowedProfileImageFields(req.body as Record<string, unknown>)) {
+    return res.status(400).json({ message: 'Profile photo cannot be updated from this endpoint.' });
   }
   const { firstName, lastName, phone, userTypeId, isActive } = req.body as {
     firstName?: string;

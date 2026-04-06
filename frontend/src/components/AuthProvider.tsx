@@ -14,7 +14,6 @@ type AuthContextValue = {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  setPhoto: (file: File) => void;
   loading: boolean;
   refreshUser: () => Promise<void>;
 };
@@ -69,12 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const setPhoto = (file: File) => {
-    const photoUrl = URL.createObjectURL(file);
-    setUser((prev) => (prev ? { ...prev, photoUrl } : prev));
-  };
-
-  const value = useMemo(() => ({ user, login, logout, setPhoto, loading, refreshUser }), [user, loading, refreshUser]);
+  const value = useMemo(() => ({ user, login, logout, loading, refreshUser }), [user, loading, refreshUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
