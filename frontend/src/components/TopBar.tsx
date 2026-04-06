@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { useLayout } from './AppLayout';
-import { apiFetch } from '../services/api';
+import { apiFetch, changePassword } from '../services/api';
 
 function getInitials(firstName?: string, lastName?: string) {
   const firstInitial = firstName?.trim().charAt(0) ?? '';
@@ -19,16 +19,22 @@ type SearchTicket = {
 };
 
 export function TopBar() {
-  const { user, logout, setPhoto } = useAuth();
+  const { user, logout } = useAuth();
   const { appLogoUrl, headerColor } = useLayout();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchTicket[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const searchRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -73,15 +79,54 @@ export function TopBar() {
     return () => window.clearTimeout(handle);
   }, [searchQuery]);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
+  const validatePassword = (password: string) => {
+    if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+    if (!/[A-Z]/.test(password)) return 'La contraseña debe incluir al menos una letra mayúscula.';
+    if (!/[a-z]/.test(password)) return 'La contraseña debe incluir al menos una letra minúscula.';
+    if (!/\d/.test(password)) return 'La contraseña debe incluir al menos un número.';
+    if (!/[^A-Za-z0-9]/.test(password)) return 'La contraseña debe incluir al menos un carácter especial.';
+    return '';
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setPhoto(file);
-    setMenuOpen(false);
+  const resetPasswordForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setPasswordSuccess('');
+    setPasswordSaving(false);
+  };
+
+  const handlePasswordSubmit = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Completa todos los campos para cambiar tu contraseña.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('La confirmación no coincide con la nueva contraseña.');
+      return;
+    }
+    const validationError = validatePassword(newPassword);
+    if (validationError) {
+      setPasswordError(validationError);
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await changePassword({ currentPassword, newPassword });
+      setPasswordSuccess('Tu contraseña se actualizó correctamente.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'No se pudo actualizar la contraseña.');
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   const handleSelectTicket = (ticketId: number) => {
@@ -160,8 +205,16 @@ export function TopBar() {
         </button>
         {menuOpen && (
           <div className="avatar-menu" role="menu">
-            <button className="avatar-menu__item" onClick={handleUploadClick} role="menuitem">
-              Upload profile photo
+            <button
+              className="avatar-menu__item"
+              onClick={() => {
+                setPasswordOpen((open) => !open);
+                setPasswordError('');
+                setPasswordSuccess('');
+              }}
+              role="menuitem"
+            >
+              Cambiar contraseña
             </button>
             <button
               className="avatar-menu__item avatar-menu__item--danger"
@@ -173,13 +226,45 @@ export function TopBar() {
             >
               Logout
             </button>
-            <input
-              ref={fileInputRef}
-              className="sr-only"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-            />
+            {passwordOpen && (
+              <div className="grid" style={{ marginTop: '8px', minWidth: '280px' }}>
+                <input
+                  type="password"
+                  placeholder="Contraseña actual"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                />
+                <input
+                  type="password"
+                  placeholder="Nueva contraseña"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+                <input
+                  type="password"
+                  placeholder="Confirmar nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+                {passwordError && <p className="form-error">{passwordError}</p>}
+                {passwordSuccess && <p style={{ color: '#166534', margin: 0 }}>{passwordSuccess}</p>}
+                <div className="action-row">
+                  <button onClick={handlePasswordSubmit} disabled={passwordSaving}>
+                    {passwordSaving ? 'Guardando...' : 'Guardar contraseña'}
+                  </button>
+                  <button
+                    className="secondary"
+                    onClick={() => {
+                      setPasswordOpen(false);
+                      resetPasswordForm();
+                    }}
+                    disabled={passwordSaving}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requireAuth, requireAdminRole, requireRole } from './middleware/auth.js';
-import { login, logout, me } from './controllers/authController.js';
+import { login, logout, me, changePassword } from './controllers/authController.js';
 import { listUsers, listUserSummaries, createUser, updateUser, disableUser, deleteUser } from './controllers/userController.js';
 import "dotenv/config";
 import {
@@ -97,6 +97,10 @@ const infoRequestSchema = z.object({
 const commentSchema = z.object({
   message: z.string().min(1)
 });
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(1)
+});
 
 app.post('/api/auth/login', authLimiter, async (req, res, next) => {
   try {
@@ -108,6 +112,14 @@ app.post('/api/auth/login', authLimiter, async (req, res, next) => {
 });
 app.post('/api/auth/logout', logout);
 app.get('/api/auth/me', noStore, requireAuth, me);
+app.put('/api/auth/password', requireAuth, async (req, res, next) => {
+  try {
+    changePasswordSchema.parse(req.body);
+    await changePassword(req, res);
+  } catch (error) {
+    next(error as Error);
+  }
+});
 
 app.get('/api/users/summary', requireAuth, listUserSummaries);
 

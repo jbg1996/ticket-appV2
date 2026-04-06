@@ -86,6 +86,10 @@ export type UpdateUserPayload = {
   userTypeId?: number;
   isActive?: boolean;
 };
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
 
 export type TicketTypePayload = { name: string; description: string; defaultPriorityId: number };
 export type PriorityPayload = { name: string; color: string };
@@ -97,6 +101,8 @@ export const createUser = (payload: CreateUserPayload) => apiFetch('/api/users',
 export const updateUser = (id: number, payload: UpdateUserPayload) =>
   apiFetch(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 export const deleteUser = (id: number) => apiFetch(`/api/users/${id}`, { method: 'DELETE' });
+export const changePassword = (payload: ChangePasswordPayload) =>
+  apiFetch<{ message: string }>('/api/auth/password', { method: 'PUT', body: JSON.stringify(payload) });
 
 export const getTicketTypes = () => apiFetch('/api/catalog/ticket-types');
 export const createTicketType = (payload: TicketTypePayload) =>

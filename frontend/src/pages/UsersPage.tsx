@@ -52,6 +52,15 @@ export function UsersPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const validatePassword = (password: string) => {
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
+    if (!/[a-z]/.test(password)) return 'Password must include at least one lowercase letter.';
+    if (!/\d/.test(password)) return 'Password must include at least one number.';
+    if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include at least one special character.';
+    return '';
+  };
+
   const loadUsers = () => {
     getUsers()
       .then((data) => setUsers(data as User[]))
@@ -81,6 +90,10 @@ export function UsersPage() {
     try {
       if (!newUser.userTypeId) {
         throw new Error('Select a role for the user.');
+      }
+      const passwordValidationError = validatePassword(newUser.password);
+      if (passwordValidationError) {
+        throw new Error(passwordValidationError);
       }
       await createUser({ ...newUser, phone: newUser.phone || undefined, userTypeId: Number(newUser.userTypeId) });
       setNewUser({ firstName: '', lastName: '', email: '', password: '', phone: '', userTypeId: '' });
