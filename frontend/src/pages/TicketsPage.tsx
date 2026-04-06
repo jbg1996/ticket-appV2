@@ -43,7 +43,6 @@ const formatDate = (value: string) => new Date(value).toLocaleString();
 const formatTicketDisplayName = (ticket: Pick<Ticket, 'code' | 'title'>) =>
   ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title;
 
-// ----------------- Color helpers -----------------
 function normalizeHexColor(input?: string | null, fallback = '#9CA3AF'): string {
   if (!input) return fallback;
   const c = input.trim();
@@ -62,7 +61,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   };
 }
 
-// amount: 0..1 (más alto = más blanco) => tinte suave para fondos
 function mixWithWhite(hex: string, amount = 0.9): string {
   const { r, g, b } = hexToRgb(hex);
   const nr = Math.round(r + (255 - r) * amount);
@@ -76,9 +74,7 @@ function rgbaFromHex(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Oscurece un color mezclándolo con negro (para texto “del mismo color pero más oscuro”)
 function darkenHex(hex: string, amount = 0.45): string {
-  // amount 0..1 (más alto = más oscuro)
   const { r, g, b } = hexToRgb(hex);
   const nr = Math.round(r * (1 - amount));
   const ng = Math.round(g * (1 - amount));
@@ -86,14 +82,11 @@ function darkenHex(hex: string, amount = 0.45): string {
   return `rgb(${nr}, ${ng}, ${nb})`;
 }
 
-// ----------------- UI render helpers (INVERTED) -----------------
-
-// ✅ PRIORITY ahora es PILL (como Status antes), con texto en un tono más oscuro del color base
 function renderPriorityPill(label: string, color?: string | null) {
   const raw = normalizeHexColor(color);
   const bg = mixWithWhite(raw, 0.90);
   const border = rgbaFromHex(raw, 0.30);
-  const text = darkenHex(raw, 0.50); // ajusta 0.40-0.60 si quieres más/menos oscuro
+  const text = darkenHex(raw, 0.50);
 
   return (
     <div
@@ -119,7 +112,6 @@ function renderPriorityPill(label: string, color?: string | null) {
   );
 }
 
-// ✅ STATUS ahora es DOT + TEXTO (como Priority antes), pero con CÍRCULO (no cuadrado)
 function renderStatusDot(label: string, color?: string | null) {
   const raw = normalizeHexColor(color);
 
@@ -138,7 +130,7 @@ function renderStatusDot(label: string, color?: string | null) {
         style={{
           width: 9,
           height: 9,
-          borderRadius: 9999, // 👈 círculo
+          borderRadius: 9999,
           backgroundColor: raw,
           boxShadow: `0 0 0 3px ${rgbaFromHex(raw, 0.12)}`,
           flex: '0 0 auto'
@@ -210,7 +202,6 @@ export function TicketsPage() {
   useEffect(() => {
     if (!selectedView) return;
     loadTickets(page, pageSize, globalSearch, selectedView);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pageSize, globalSearch, selectedView]);
 
   useEffect(() => {
@@ -600,12 +591,10 @@ export function TicketsPage() {
                   <Link to={`/tickets/${ticket.id}`}>{formatTicketDisplayName(ticket)}</Link>
                 </td>
 
-                {/* ✅ STATUS ahora: dot + texto (círculo) */}
                 <td style={{ paddingTop: 8, paddingBottom: 8 }}>
                   {renderStatusDot(ticketStatusLabel(ticket.status.name), ticket.status.color)}
                 </td>
 
-                {/* ✅ PRIORITY ahora: pill con texto más oscuro del color */}
                 <td style={{ paddingTop: 8, paddingBottom: 8 }}>
                   {renderPriorityPill(ticket.priority?.name ?? '—', ticket.priority?.color)}
                 </td>
