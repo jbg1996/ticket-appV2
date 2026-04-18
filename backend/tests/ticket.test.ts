@@ -1,6 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
+import ExcelJS from 'exceljs';
 import prisma from '../src/prisma/client.js';
 import app from '../src/index.js';
 
@@ -11,6 +12,7 @@ let priorityId = 0;
 let userId = 0;
 let requesterToken = '';
 let techToken = '';
+let techUserId = 0;
 
 beforeAll(async () => {
   const adminType = await prisma.userType.create({ data: { name: 'Admin', code: 'ADMIN' } });
@@ -62,7 +64,7 @@ beforeAll(async () => {
     .send({ email: 'requester@test.local', password: 'Password123!' });
   requesterToken = requesterLoginRes.body.token;
 
-  await prisma.user.create({
+  const techUser = await prisma.user.create({
     data: {
       firstName: 'Tech',
       lastName: 'User',
@@ -71,6 +73,7 @@ beforeAll(async () => {
       userTypeId: techType.id
     }
   });
+  techUserId = techUser.id;
 
   const techLoginRes = await request(app)
     .post('/api/auth/login')
@@ -89,6 +92,20 @@ afterAll(async () => {
 });
 
 describe('Ticket creation', () => {
+  const getReportRowCount = async (reportId: number, authToken: string) => {
+    const downloadResponse = await request(app)
+      .get(`/api/reports/${reportId}/download`)
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(downloadResponse.status).toBe(200);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(downloadResponse.body);
+    const detailSheet = workbook.getWorksheet('Details');
+    expect(detailSheet).toBeDefined();
+    if (!detailSheet || detailSheet.rowCount <= 1) return 0;
+    return detailSheet.rowCount - 1;
+  };
+
   it('creates a ticket', async () => {
     const response = await request(app)
       .post('/api/tickets')
@@ -176,5 +193,78 @@ describe('Ticket creation', () => {
     expect(response.body.totalPages).toBeGreaterThanOrEqual(3);
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.data).toHaveLength(10);
+  });
+
+  it('allows ADMIN and TECH to create reports, but denies REQUESTER', async () => {
+    const adminReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preset: 'TODAY' });
+    expect(adminReportResponse.status).toBe(201);
+
+    const techReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ preset: 'TODAY' });
+    expect(techReportResponse.status).toBe(201);
+
+    const requesterReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${requesterToken}`)
+      .send({ preset: 'TODAY' });
+    expect(requesterReportResponse.status).toBe(403);
+  });
+
+  it('generates reports for source=tickets using the active ticket view filter', async () => {
+    await request(app)
+      .post('/api/tickets')
+      .set('Authorization', `Bearer ${requesterToken}`)
+      .send({ ticketTypeId, description: 'Requester ticket for filtered report', priorityId });
+
+    const adminReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ source: 'tickets', ticketQuery: { view: 'CREATED_BY_ME' } });
+    expect(adminReportResponse.status).toBe(201);
+    const adminReportCount = await getReportRowCount(adminReportResponse.body.id as number, token);
+
+    const expectedAdminCount = await prisma.ticket.count({ where: { createdById: userId } });
+    expect(adminReportCount).toBe(expectedAdminCount);
+
+    await request(app)
+      .post('/api/tickets')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ticketTypeId, description: 'Ticket assigned to tech for filtered report', priorityId });
+    await request(app)
+      .post('/api/tickets')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ticketTypeId, description: 'Ticket assigned to admin for filtered report', priorityId });
+
+    const latestTicketsResponse = await request(app)
+      .get('/api/tickets?page=1&pageSize=2')
+      .set('Authorization', `Bearer ${token}`);
+    expect(latestTicketsResponse.status).toBe(200);
+    const [latestA, latestB] = latestTicketsResponse.body.data as Array<{ id: number }>;
+    expect(latestA?.id).toBeTruthy();
+    expect(latestB?.id).toBeTruthy();
+
+    await request(app)
+      .post(`/api/tickets/${latestA.id}/assign`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ assigneeId: techUserId });
+    await request(app)
+      .post(`/api/tickets/${latestB.id}/assign`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ assigneeId: userId });
+
+    const techReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ source: 'tickets', ticketQuery: { view: 'ASSIGNED_TO_ME' } });
+    expect(techReportResponse.status).toBe(201);
+    const techReportCount = await getReportRowCount(techReportResponse.body.id as number, techToken);
+
+    const expectedTechCount = await prisma.ticket.count({ where: { assignedToId: techUserId } });
+    expect(techReportCount).toBe(expectedTechCount);
   });
 });

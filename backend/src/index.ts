@@ -198,11 +198,11 @@ app.post('/api/tickets/:id/attachments', requireAuth, upload.single('file'), upl
 app.get('/api/attachments/:id/download', requireAuth, downloadAttachment);
 app.delete('/api/tickets/:ticketId/attachments/:attachmentId', requireAuth, deleteAttachment);
 
-app.post('/api/reports', requireAuth, requireAdminRole, generateReportHandler);
-app.post('/api/reports/generate', requireAuth, requireAdminRole, generateReportHandler);
-app.get('/api/reports', requireAuth, requireAdminRole, listReports);
+app.post('/api/reports', requireAuth, requireRole(['ADMIN', 'TECH']), generateReportHandler);
+app.post('/api/reports/generate', requireAuth, requireRole(['ADMIN', 'TECH']), generateReportHandler);
+app.get('/api/reports', requireAuth, requireRole(['ADMIN', 'TECH']), listReports);
 app.delete('/api/reports/:id', requireAuth, requireAdminRole, deleteReport);
-app.get('/api/reports/:id/download', noStore, requireAuth, requireAdminRole, downloadReport);
+app.get('/api/reports/:id/download', noStore, requireAuth, requireRole(['ADMIN', 'TECH']), downloadReport);
 
 app.get('/api/settings/header-color', noStore, requireAuth, getAppSettings);
 app.put('/api/settings/header-color', requireAuth, requireRole(['ADMIN']), updateAppSettings);

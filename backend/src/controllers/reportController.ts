@@ -5,6 +5,7 @@ import { generateReport } from '../services/reportService.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { buildTicketQuery, parseTicketQuery } from '../utils/ticketQueryBuilder.js';
 import { parseId } from '../utils/parseId.js';
+import { buildTicketWhere, isTicketViewKey, isViewAllowedForRole } from '../constants/ticketViews.js';
 
 type ReportPreset = 'TODAY' | 'THIS_MONTH' | 'YTD' | 'CUSTOM';
 
@@ -63,7 +64,18 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
     } catch (error) {
       return res.status(400).json({ message: error instanceof Error ? error.message : 'Invalid ticket query.' });
     }
-    const { where, orderBy } = buildTicketQuery({ query: parsedQuery });
+    let baseWhere = undefined;
+    if (parsedQuery.view) {
+      if (!isTicketViewKey(parsedQuery.view)) {
+        return res.status(400).json({ message: 'Invalid ticket view.' });
+      }
+      if (!isViewAllowedForRole(parsedQuery.view, req.user.role)) {
+        return res.status(403).json({ message: 'Ticket view not allowed for this role.' });
+      }
+      baseWhere = buildTicketWhere(parsedQuery.view, req.user);
+    }
+
+    const { where, orderBy } = buildTicketQuery({ query: parsedQuery, baseWhere });
     const fileName = `report-tickets-${new Date().toISOString().split('T')[0]}.xlsx`;
     const now = new Date();
     const pendingReport = await prisma.report.create({
