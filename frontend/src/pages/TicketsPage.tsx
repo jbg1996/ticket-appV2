@@ -449,6 +449,7 @@ export function TicketsPage() {
     try {
       const ticketQuery = {
         q: globalSearch.trim() || undefined,
+        view: selectedView ?? undefined,
         filters: Object.keys(columnFilters).length > 0 ? columnFilters : undefined,
         sort: sorting ? { column: sorting.columnId, direction: sorting.direction } : undefined
       };

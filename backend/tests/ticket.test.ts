@@ -1,6 +1,7 @@
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
+import ExcelJS from 'exceljs';
 import prisma from '../src/prisma/client.js';
 import app from '../src/index.js';
 
@@ -11,6 +12,7 @@ let priorityId = 0;
 let userId = 0;
 let requesterToken = '';
 let techToken = '';
+let techUserId = 0;
 
 beforeAll(async () => {
   const adminType = await prisma.userType.create({ data: { name: 'Admin', code: 'ADMIN' } });
@@ -62,7 +64,7 @@ beforeAll(async () => {
     .send({ email: 'requester@test.local', password: 'Password123!' });
   requesterToken = requesterLoginRes.body.token;
 
-  await prisma.user.create({
+  const techUser = await prisma.user.create({
     data: {
       firstName: 'Tech',
       lastName: 'User',
@@ -71,6 +73,7 @@ beforeAll(async () => {
       userTypeId: techType.id
     }
   });
+  techUserId = techUser.id;
 
   const techLoginRes = await request(app)
     .post('/api/auth/login')
@@ -89,6 +92,20 @@ afterAll(async () => {
 });
 
 describe('Ticket creation', () => {
+  const getReportRowCount = async (reportId: number, authToken: string) => {
+    const downloadResponse = await request(app)
+      .get(`/api/reports/${reportId}/download`)
+      .set('Authorization', `Bearer ${authToken}`);
+    expect(downloadResponse.status).toBe(200);
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(downloadResponse.body);
+    const detailSheet = workbook.getWorksheet('Details');
+    expect(detailSheet).toBeDefined();
+    if (!detailSheet || detailSheet.rowCount <= 1) return 0;
+    return detailSheet.rowCount - 1;
+  };
+
   it('creates a ticket', async () => {
     const response = await request(app)
       .post('/api/tickets')
