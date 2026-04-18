@@ -158,7 +158,7 @@ app.post('/api/tickets', requireAuth, async (req, res, next) => {
     next(error as Error);
   }
 });
-app.post('/api/tickets/:id/assign', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
+app.post('/api/tickets/:id/assign', requireAuth, requireRole(['ADMIN', 'TECH']), async (req, res, next) => {
   try {
     assignSchema.parse(req.body);
     await assignTicket(req, res);
