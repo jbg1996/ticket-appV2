@@ -22,6 +22,7 @@ export function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
+  const canCreateReports = user?.role === 'ADMIN' || user?.role === 'TECH';
 
   const loadReports = useCallback(() => {
     setError('');
@@ -64,7 +65,7 @@ export function ReportsPage() {
   }, [preset, startDate, endDate]);
 
   const handleGenerate = async () => {
-    if (!isAdmin) return;
+    if (!canCreateReports) return;
     setError('');
     if (preset === 'CUSTOM' && (!startDate || !endDate)) {
       setError('Select start and end dates.');
@@ -93,7 +94,7 @@ export function ReportsPage() {
       <h2>Reports</h2>
       <p className="page__subtitle">Generated reports ready for download.</p>
       {error ? <p className="form__error">{error}</p> : null}
-      {isAdmin && (
+      {canCreateReports && (
         <div className="card">
           <h3>Generate report</h3>
           <div className="report-form">
