@@ -49,6 +49,7 @@ export function TicketDetailPage() {
   const [assigneeQuery, setAssigneeQuery] = useState('');
   const [assigneeOpen, setAssigneeOpen] = useState(false);
 
+  const canAssignTicket = user?.role === 'ADMIN' || user?.role === 'TECH';
   const isAdmin = user?.role === 'ADMIN';
   const canDeleteAttachment = user?.role === 'ADMIN' || user?.role === 'TECH';
 
@@ -116,12 +117,12 @@ export function TicketDetailPage() {
   useEffect(() => {
     apiFetch<Status[]>('/api/catalog/statuses').then(setStatuses);
     apiFetch<Priority[]>('/api/catalog/priorities').then(setPriorities);
-    if (isAdmin) {
-      apiFetch<User[]>('/api/users').then((users) =>
+    if (canAssignTicket) {
+      apiFetch<User[]>('/api/users/summary').then((users) =>
         setAssignees(users.filter((candidate) => candidate.isActive && candidate.userType.code === 'TECH'))
       );
     }
-  }, [isAdmin]);
+  }, [canAssignTicket]);
 
   const filteredAssignees = useMemo(() => {
     const query = assigneeQuery.trim().toLowerCase();
@@ -307,14 +308,14 @@ export function TicketDetailPage() {
             </div>
             <Popover open={assigneeOpen} onOpenChange={setAssigneeOpen}>
               <div className="ticket-detail__assignee-wrapper">
-                <PopoverTrigger className="ticket-detail__assignee" disabled={!isAdmin}>
+                <PopoverTrigger className="ticket-detail__assignee" disabled={!canAssignTicket}>
                   <span className="ticket-detail__avatar" aria-hidden="true">
                     {assignedInitials}
                   </span>
                   <span className="ticket-detail__assignee-name">{assignedName}</span>
-                  {isAdmin && <span className="ticket-detail__assignee-action">Cambiar</span>}
+                  {canAssignTicket && <span className="ticket-detail__assignee-action">Cambiar</span>}
                 </PopoverTrigger>
-                {isAdmin && (
+                {canAssignTicket && (
                   <PopoverContent className="ticket-detail__assignee-popover">
                     <input
                       type="text"

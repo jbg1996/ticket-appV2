@@ -10,10 +10,12 @@ let statusId = 0;
 let priorityId = 0;
 let userId = 0;
 let requesterToken = '';
+let techToken = '';
 
 beforeAll(async () => {
   const adminType = await prisma.userType.create({ data: { name: 'Admin', code: 'ADMIN' } });
   const requesterType = await prisma.userType.create({ data: { name: 'Requester', code: 'REQUESTER' } });
+  const techType = await prisma.userType.create({ data: { name: 'Technical', code: 'TECH' } });
   const passwordHash = await bcrypt.hash('Password123!', 10);
   const user = await prisma.user.create({
     data: {
@@ -59,6 +61,21 @@ beforeAll(async () => {
     .post('/api/auth/login')
     .send({ email: 'requester@test.local', password: 'Password123!' });
   requesterToken = requesterLoginRes.body.token;
+
+  await prisma.user.create({
+    data: {
+      firstName: 'Tech',
+      lastName: 'User',
+      email: 'tech@test.local',
+      passwordHash,
+      userTypeId: techType.id
+    }
+  });
+
+  const techLoginRes = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'tech@test.local', password: 'Password123!' });
+  techToken = techLoginRes.body.token;
 });
 
 afterAll(async () => {
@@ -83,6 +100,42 @@ describe('Ticket creation', () => {
   });
 
 
+
+
+  it('allows ADMIN and TECH to assign tickets, but denies REQUESTER', async () => {
+    const createResponse = await request(app)
+      .post('/api/tickets')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ticketTypeId, description: 'Assign permission test', priorityId });
+
+    expect(createResponse.status).toBe(201);
+    const ticketId = createResponse.body.id as number;
+
+    const usersResponse = await request(app)
+      .get('/api/users/summary')
+      .set('Authorization', `Bearer ${token}`);
+
+    const techUser = usersResponse.body.find((candidate: { id: number; userType: { code: string } }) => candidate.userType.code === 'TECH');
+    expect(techUser).toBeTruthy();
+
+    const adminAssignResponse = await request(app)
+      .post(`/api/tickets/${ticketId}/assign`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ assigneeId: techUser.id });
+    expect(adminAssignResponse.status).toBe(200);
+
+    const techAssignResponse = await request(app)
+      .post(`/api/tickets/${ticketId}/assign`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ assigneeId: techUser.id });
+    expect(techAssignResponse.status).toBe(200);
+
+    const requesterAssignResponse = await request(app)
+      .post(`/api/tickets/${ticketId}/assign`)
+      .set('Authorization', `Bearer ${requesterToken}`)
+      .send({ assigneeId: techUser.id });
+    expect(requesterAssignResponse.status).toBe(403);
+  });
 
   it('rejects unauthorized ticket views for requester users', async () => {
     const forbiddenViewResponse = await request(app)

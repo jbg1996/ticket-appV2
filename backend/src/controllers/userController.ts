@@ -21,6 +21,7 @@ export async function listUserSummaries(_req: Request, res: Response) {
       id: true,
       firstName: true,
       lastName: true,
+      isActive: true,
       userType: { select: { name: true, code: true } }
     }
   });
