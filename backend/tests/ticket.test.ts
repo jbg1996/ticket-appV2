@@ -177,4 +177,24 @@ describe('Ticket creation', () => {
     expect(Array.isArray(response.body.data)).toBe(true);
     expect(response.body.data).toHaveLength(10);
   });
+
+  it('allows ADMIN and TECH to create reports, but denies REQUESTER', async () => {
+    const adminReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preset: 'TODAY' });
+    expect(adminReportResponse.status).toBe(201);
+
+    const techReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ preset: 'TODAY' });
+    expect(techReportResponse.status).toBe(201);
+
+    const requesterReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${requesterToken}`)
+      .send({ preset: 'TODAY' });
+    expect(requesterReportResponse.status).toBe(403);
+  });
 });
