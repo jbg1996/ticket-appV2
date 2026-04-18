@@ -21,6 +21,7 @@ export type ColumnFilterInput = TextColumnFilter | DateColumnFilter;
 
 export type TicketQueryInput = {
   q?: string;
+  view?: string;
   filters?: Record<string, ColumnFilterInput | undefined>;
   sort?: { column?: string; direction?: 'asc' | 'desc' } | null;
 };
@@ -61,6 +62,7 @@ export function parseTicketQuery(value: unknown): TicketQueryInput {
     throw new Error('ticketQuery is required.');
   }
   const q = typeof value.q === 'string' ? value.q : undefined;
+  const view = typeof value.view === 'string' ? value.view : undefined;
   let sort: TicketQueryInput['sort'] = null;
   if (value.sort !== undefined) {
     if (!isPlainObject(value.sort)) {
@@ -108,7 +110,7 @@ export function parseTicketQuery(value: unknown): TicketQueryInput {
       }
     });
   }
-  return { q, sort, filters: Object.keys(filters).length > 0 ? filters : undefined };
+  return { q, view, sort, filters: Object.keys(filters).length > 0 ? filters : undefined };
 }
 
 function startOfDay(value: Date) {
