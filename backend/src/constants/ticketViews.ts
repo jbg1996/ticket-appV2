@@ -29,7 +29,7 @@ export const TICKET_VIEW_DEFINITIONS: Record<
   [TICKET_VIEW_KEY.ALL_TICKETS]: {
     label: 'All Tickets',
     description: 'Shows all tickets regardless of status.',
-    rolesAllowed: ['ADMIN']
+    rolesAllowed: ['ADMIN', 'TECH']
   },
   [TICKET_VIEW_KEY.CREATED_BY_ME]: {
     label: 'Tickets Created by Me',

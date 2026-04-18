@@ -138,6 +138,12 @@ describe('Ticket creation', () => {
   });
 
   it('rejects unauthorized ticket views for requester users', async () => {
+    const techAllowedViewResponse = await request(app)
+      .get('/api/tickets?view=ALL_TICKETS')
+      .set('Authorization', `Bearer ${techToken}`);
+
+    expect(techAllowedViewResponse.status).toBe(200);
+
     const forbiddenViewResponse = await request(app)
       .get('/api/tickets?view=ALL_TICKETS')
       .set('Authorization', `Bearer ${requesterToken}`);
