@@ -380,6 +380,7 @@ export function TicketsPage() {
   const visibleIds = useMemo(() => displayTickets.map((ticket) => ticket.id), [displayTickets]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const isAdmin = user?.role === 'ADMIN';
+  const canCreateReports = user?.role === 'ADMIN' || user?.role === 'TECH';
 
   useEffect(() => {
     if (!selectAllRef.current) return;
@@ -442,6 +443,7 @@ export function TicketsPage() {
   };
 
   const handleReport = async () => {
+    if (!canCreateReports) return;
     setActionLoading(true);
     setFeedback('');
     try {
@@ -523,17 +525,19 @@ export function TicketsPage() {
               </button>
             ) : null}
 
-            <button
-              type="button"
-              className="tickets-toolbar__button secondary"
-              onClick={handleReport}
-              disabled={actionLoading}
-            >
-              <span className="btnInner">
-                <ReportIcon size={16} className="tickets-toolbar__button-icon" />
-                <span>Report</span>
-              </span>
-            </button>
+            {canCreateReports ? (
+              <button
+                type="button"
+                className="tickets-toolbar__button secondary"
+                onClick={handleReport}
+                disabled={actionLoading}
+              >
+                <span className="btnInner">
+                  <ReportIcon size={16} className="tickets-toolbar__button-icon" />
+                  <span>Report</span>
+                </span>
+              </button>
+            ) : null}
           </div>
         </div>
 
