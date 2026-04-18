@@ -15,7 +15,7 @@ describe('ticket view definitions', () => {
 
   it('checks role permissions', () => {
     expect(isViewAllowedForRole(TICKET_VIEW_KEY.ALL_TICKETS, 'ADMIN')).toBe(true);
-    expect(isViewAllowedForRole(TICKET_VIEW_KEY.ALL_TICKETS, 'TECH')).toBe(false);
+    expect(isViewAllowedForRole(TICKET_VIEW_KEY.ALL_TICKETS, 'TECH')).toBe(true);
     expect(isViewAllowedForRole(TICKET_VIEW_KEY.RESOLVED_CREATED_BY_ME, 'REQUESTER')).toBe(true);
   });
 

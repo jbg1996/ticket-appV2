@@ -24,7 +24,7 @@ export const TICKET_VIEWS: TicketViewDefinition[] = [
     key: TICKET_VIEW_KEY.ALL_TICKETS,
     label: 'All Tickets',
     description: 'Shows all tickets regardless of status.',
-    rolesAllowed: ['ADMIN']
+    rolesAllowed: ['ADMIN', 'TECH']
   },
   {
     key: TICKET_VIEW_KEY.CREATED_BY_ME,
