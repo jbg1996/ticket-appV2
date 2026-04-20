@@ -233,7 +233,6 @@ async function main() {
         ticketId: t.id,
         requesterTechId: requesterTech.id,
         message: 'Please share screenshots and reproduction steps.',
-        requestedFields: 'capturas,pasos,error',
         status: Math.random() < 0.5 ? 'OPEN' : 'CLOSED',
         createdAt: new Date(t.createdAt.getTime() + randomInt(60, 720) * 60 * 1000),
         closedAt: Math.random() < 0.5 ? new Date() : null

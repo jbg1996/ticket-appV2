@@ -91,8 +91,7 @@ const statusSchema = z.object({
   statusId: z.coerce.number()
 });
 const infoRequestSchema = z.object({
-  message: z.string().min(1),
-  requestedFields: z.array(z.string()).optional()
+  message: z.string().min(1)
 });
 const commentSchema = z.object({
   message: z.string().min(1)
