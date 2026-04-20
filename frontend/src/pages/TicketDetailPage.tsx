@@ -395,7 +395,7 @@ export function TicketDetailPage() {
         <TabsContent value="details" className="ticket-detail__tab-panel">
           <div className="card">
             <h3>Description</h3>
-            <p>{ticket.description}</p>
+            <p className="ticket-detail__multiline">{ticket.description}</p>
           </div>
 
           <div className="card">
@@ -414,11 +414,11 @@ export function TicketDetailPage() {
             {ticket.infoRequests.map((request) => (
               <div key={request.id} style={{ marginTop: '12px' }}>
                 <p>
-                  <strong>{request.requesterTech.firstName}</strong>: {request.message} ({request.status})
+                  <strong>{request.requesterTech.firstName}</strong>: <span className="ticket-detail__multiline-inline">{request.message}</span> ({request.status})
                 </p>
                 {request.responses.map((response) => (
                   <p key={response.id}>
-                    <em>{response.responder.firstName}:</em> {response.message}
+                    <em>{response.responder.firstName}:</em> <span className="ticket-detail__multiline-inline">{response.message}</span>
                   </p>
                 ))}
                 <div className="grid">
@@ -471,7 +471,7 @@ export function TicketDetailPage() {
             <ul>
               {ticket.history.map((history) => (
                 <li key={history.id}>
-                  {history.createdAt}: {history.eventType} - {history.message ?? ''} by {history.actor.firstName}
+                  {history.createdAt}: {history.eventType} - <span className="ticket-detail__multiline-inline">{history.message ?? ''}</span> by {history.actor.firstName}
                 </li>
               ))}
             </ul>
