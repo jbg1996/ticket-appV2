@@ -34,7 +34,6 @@ export function TicketDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState('');
-  const [requestedFields, setRequestedFields] = useState('');
   const [responseMessage, setResponseMessage] = useState('');
   const [responseFile, setResponseFile] = useState<File | null>(null);
   const [comment, setComment] = useState('');
@@ -137,15 +136,10 @@ export function TicketDetailPage() {
     await apiFetch(`/api/tickets/${ticketId}/request-info`, {
       method: 'POST',
       body: JSON.stringify({
-        message: infoMessage,
-        requestedFields: requestedFields
-          .split(',')
-          .map((field) => field.trim())
-          .filter(Boolean)
+        message: infoMessage
       })
     });
     setInfoMessage('');
-    setRequestedFields('');
     loadTicket();
   };
 
@@ -403,11 +397,6 @@ export function TicketDetailPage() {
             {user?.role !== 'REQUESTER' && (
               <div className="grid">
                 <textarea rows={2} value={infoMessage} onChange={(event) => setInfoMessage(event.target.value)} />
-                <input
-                  placeholder="Requested fields (comma separated)"
-                  value={requestedFields}
-                  onChange={(event) => setRequestedFields(event.target.value)}
-                />
                 <button onClick={handleRequestInfo}>Request Info</button>
               </div>
             )}
