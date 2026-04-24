@@ -256,4 +256,37 @@ describe('Ticket creation', () => {
       .send({ preset: 'TODAY' });
     expect(requesterReportResponse.status).toBe(403);
   });
+
+  it('generates unique report names for the same preset without overwriting', async () => {
+    const firstReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preset: 'TODAY' });
+    expect(firstReportResponse.status).toBe(201);
+
+    const secondReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preset: 'TODAY' });
+    expect(secondReportResponse.status).toBe(201);
+
+    expect(firstReportResponse.body.fileName).not.toBe(secondReportResponse.body.fileName);
+    expect(firstReportResponse.body.filePath).not.toBe(secondReportResponse.body.filePath);
+    expect(firstReportResponse.body.fileName).toMatch(
+      /^report-today-\d{17}-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.xlsx$/
+    );
+    expect(secondReportResponse.body.fileName).toMatch(
+      /^report-today-\d{17}-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.xlsx$/
+    );
+
+    const firstDownloadResponse = await request(app)
+      .get(`/api/reports/${firstReportResponse.body.id}/download`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(firstDownloadResponse.status).toBe(200);
+
+    const secondDownloadResponse = await request(app)
+      .get(`/api/reports/${secondReportResponse.body.id}/download`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(secondDownloadResponse.status).toBe(200);
+  });
 });
