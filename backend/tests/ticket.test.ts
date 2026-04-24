@@ -116,8 +116,50 @@ describe('Ticket creation', () => {
     expect(response.body.creatorId).toBe(userId);
   });
 
+  it('preserves multiline text in ticket descriptions and info requests', async () => {
+    const multilineDescription = 'Línea 1\nLínea 2\nLínea 3';
+    const createResponse = await request(app)
+      .post('/api/tickets')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ ticketTypeId, description: multilineDescription, priorityId });
 
+    expect(createResponse.status).toBe(201);
+    expect(createResponse.body.description).toBe(multilineDescription);
 
+    const ticketId = createResponse.body.id as number;
+
+    const ticketResponse = await request(app)
+      .get(`/api/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(ticketResponse.status).toBe(200);
+    expect(ticketResponse.body.description).toBe(multilineDescription);
+
+    const multilineInfoRequest = 'Dato 1\nDato 2\nDato 3';
+    const infoRequestResponse = await request(app)
+      .post(`/api/tickets/${ticketId}/request-info`)
+      .set('Authorization', `Bearer ${techToken}`)
+      .send({ message: multilineInfoRequest });
+
+    expect(infoRequestResponse.status).toBe(201);
+    expect(infoRequestResponse.body.message).toBe(multilineInfoRequest);
+
+    const multilineInfoResponse = 'Respuesta A\nRespuesta B\nRespuesta C';
+    const respondInfoResponse = await request(app)
+      .post(`/api/info-requests/${infoRequestResponse.body.id}/respond`)
+      .set('Authorization', `Bearer ${requesterToken}`)
+      .field('message', multilineInfoResponse);
+
+    expect(respondInfoResponse.status).toBe(201);
+
+    const ticketAfterInfoResponse = await request(app)
+      .get(`/api/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(ticketAfterInfoResponse.status).toBe(200);
+    expect(ticketAfterInfoResponse.body.infoRequests[0].message).toBe(multilineInfoRequest);
+    expect(ticketAfterInfoResponse.body.infoRequests[0].responses[0].message).toBe(multilineInfoResponse);
+  });
 
   it('allows ADMIN and TECH to assign tickets, but denies REQUESTER', async () => {
     const createResponse = await request(app)
@@ -213,5 +255,38 @@ describe('Ticket creation', () => {
       .set('Authorization', `Bearer ${requesterToken}`)
       .send({ preset: 'TODAY' });
     expect(requesterReportResponse.status).toBe(403);
+  });
+
+  it('generates unique report names for the same preset without overwriting', async () => {
+    const firstReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preset: 'TODAY' });
+    expect(firstReportResponse.status).toBe(201);
+
+    const secondReportResponse = await request(app)
+      .post('/api/reports')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ preset: 'TODAY' });
+    expect(secondReportResponse.status).toBe(201);
+
+    expect(firstReportResponse.body.fileName).not.toBe(secondReportResponse.body.fileName);
+    expect(firstReportResponse.body.filePath).not.toBe(secondReportResponse.body.filePath);
+    expect(firstReportResponse.body.fileName).toMatch(
+      /^report-today-\d{17}-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.xlsx$/
+    );
+    expect(secondReportResponse.body.fileName).toMatch(
+      /^report-today-\d{17}-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.xlsx$/
+    );
+
+    const firstDownloadResponse = await request(app)
+      .get(`/api/reports/${firstReportResponse.body.id}/download`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(firstDownloadResponse.status).toBe(200);
+
+    const secondDownloadResponse = await request(app)
+      .get(`/api/reports/${secondReportResponse.body.id}/download`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(secondDownloadResponse.status).toBe(200);
   });
 });

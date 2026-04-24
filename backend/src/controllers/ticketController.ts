@@ -458,13 +458,12 @@ export async function requestInfo(req: AuthRequest, res: Response) {
   if (!parsedId) {
     return res.status(400).json({ message: 'Invalid ticket id.' });
   }
-  const { message, requestedFields } = req.body as { message: string; requestedFields?: string[] };
+  const { message } = req.body as { message: string };
   const infoRequest = await prisma.infoRequest.create({
     data: {
       ticketId: parsedId,
       requesterTechId: req.user.id,
       message,
-      requestedFields: requestedFields ? JSON.stringify(requestedFields) : undefined,
       status: 'OPEN'
     }
   });

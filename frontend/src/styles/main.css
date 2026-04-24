@@ -725,6 +725,15 @@ nav a {
   color: #ffffff;
 }
 
+
+.ticket-detail__multiline {
+  white-space: pre-wrap;
+}
+
+.ticket-detail__multiline-inline {
+  white-space: pre-wrap;
+}
+
 .ticket-detail__tab-panel {
   display: flex;
   flex-direction: column;
