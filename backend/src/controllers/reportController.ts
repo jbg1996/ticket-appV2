@@ -76,11 +76,9 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
     }
 
     const { where, orderBy } = buildTicketQuery({ query: parsedQuery, baseWhere });
-    const fileName = `report-tickets-${new Date().toISOString().split('T')[0]}.xlsx`;
     const now = new Date();
     const pendingReport = await prisma.report.create({
       data: {
-        fileName,
         preset: 'TICKETS',
         rangeStart: now,
         rangeEnd: now,
@@ -92,8 +90,7 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
       const reportResult = await generateReport({
         label: 'tickets',
         where,
-        orderBy,
-        fileName
+        orderBy
       });
       console.info(`Report generation ticket count`, { reportId: pendingReport.id, ticketCount: reportResult.ticketCount });
       const report = await prisma.report.update({
@@ -128,10 +125,8 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
   if (!range) {
     return res.status(400).json({ message: 'Invalid date range.' });
   }
-  const fileName = `report-${preset.toLowerCase()}-${new Date().toISOString().split('T')[0]}.xlsx`;
   const pendingReport = await prisma.report.create({
     data: {
-      fileName,
       preset,
       rangeStart: range.rangeStart,
       rangeEnd: range.rangeEnd,
@@ -149,8 +144,7 @@ export async function generateReportHandler(req: AuthRequest, res: Response) {
           gte: range.rangeStart,
           lte: range.rangeEnd
         }
-      },
-      fileName
+      }
     });
     console.info(`Report generation ticket count`, { reportId: pendingReport.id, ticketCount: reportResult.ticketCount });
     const report = await prisma.report.update({

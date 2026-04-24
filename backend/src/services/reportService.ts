@@ -1,12 +1,35 @@
 import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs/promises';
+import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../prisma/client.js';
 import { env } from '../config/env.js';
 
 async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
+}
+
+function sanitizeFileSegment(value: string) {
+  const sanitized = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-');
+  return sanitized || 'unknown';
+}
+
+function buildCompactTimestamp(date: Date) {
+  const isoDigits = date.toISOString().replace(/\D/g, '');
+  return isoDigits.slice(0, 17);
+}
+
+function buildUniqueReportFileName(label: string, date: Date) {
+  const filterSegment = sanitizeFileSegment(label);
+  const timestamp = buildCompactTimestamp(date);
+  const uuid = randomUUID();
+  return `report-${filterSegment}-${timestamp}-${uuid}.xlsx`;
 }
 
 
@@ -146,7 +169,7 @@ export async function generateReport(params: GenerateReportParams): Promise<Gene
   }
 
   await ensureDir(env.reportDir);
-  const resolvedFileName = fileName ?? `report-${label}-${now.toISOString().split('T')[0]}.xlsx`;
+  const resolvedFileName = fileName ?? buildUniqueReportFileName(label, now);
   const filePath = path.join(env.reportDir, resolvedFileName);
   await workbook.xlsx.writeFile(filePath);
 
