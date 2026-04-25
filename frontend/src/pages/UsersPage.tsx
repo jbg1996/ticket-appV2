@@ -77,7 +77,7 @@ export function UsersPage() {
                   <td>{user.isActive ? 'Active' : 'Disabled'}</td>
                   <td className="action-row">
                     <button onClick={() => navigate(`/admin/users/${user.id}/edit`)} disabled={loading}>Edit</button>
-                    <button className="secondary" onClick={() => handleDelete(user.id)} disabled={loading}>Delete</button>
+                    <button className="danger" onClick={() => handleDelete(user.id)} disabled={loading}>Delete</button>
                   </td>
                 </tr>
               ))}
