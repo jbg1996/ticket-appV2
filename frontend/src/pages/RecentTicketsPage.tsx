@@ -18,7 +18,13 @@ export function RecentTicketsPage() {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<Ticket[]>([]);
 
-  const formatTicketDisplayName = (ticket: Ticket) => (ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title);
+  const formatTicketDisplayName = (ticket: Ticket) => {
+    if (!ticket.code) return ticket.title;
+    const normalizedTitle = ticket.title.trim().toLowerCase();
+    const normalizedCode = ticket.code.trim().toLowerCase();
+    const alreadyIncludesCode = normalizedTitle.startsWith(`${normalizedCode} - `);
+    return alreadyIncludesCode ? ticket.title : `${ticket.code} - ${ticket.title}`;
+  };
 
   useEffect(() => {
     apiFetch<Ticket[]>('/api/tickets/recent?hours=48')

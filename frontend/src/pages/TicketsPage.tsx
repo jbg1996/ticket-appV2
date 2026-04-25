@@ -40,8 +40,13 @@ type ColumnDefinition = {
 };
 
 const formatDate = (value: string) => new Date(value).toLocaleString();
-const formatTicketDisplayName = (ticket: Pick<Ticket, 'code' | 'title'>) =>
-  ticket.code ? `${ticket.code} - ${ticket.title}` : ticket.title;
+const formatTicketDisplayName = (ticket: Pick<Ticket, 'code' | 'title'>) => {
+  if (!ticket.code) return ticket.title;
+  const normalizedTitle = ticket.title.trim().toLowerCase();
+  const normalizedCode = ticket.code.trim().toLowerCase();
+  const alreadyIncludesCode = normalizedTitle.startsWith(`${normalizedCode} - `);
+  return alreadyIncludesCode ? ticket.title : `${ticket.code} - ${ticket.title}`;
+};
 
 function normalizeHexColor(input?: string | null, fallback = '#9CA3AF'): string {
   if (!input) return fallback;
