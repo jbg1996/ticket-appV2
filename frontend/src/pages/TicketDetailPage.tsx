@@ -472,19 +472,20 @@ export function TicketDetailPage() {
             <h3>Attachments</h3>
             <input type="file" onChange={handleUpload} />
             {attachmentError && <p className="form-error">{attachmentError}</p>}
-            <ul>
+            <ul className="ticket-detail__attachments-list">
               {ticket.attachments.map((attachment) => (
-                <li key={attachment.id}>
-                  <div className="inline-flex items-center gap-2">
+                <li key={attachment.id} className="ticket-detail__attachment-item">
+                  <div className="ticket-detail__attachment-actions">
                     <button
-                      className="secondary h-9 px-3 text-sm"
+                      className="secondary ticket-detail__attachment-button"
                       onClick={() => handleDownload(attachment.id, attachment.originalName)}
+                      type="button"
                     >
                       Download {attachment.originalName}
                     </button>
                     {canDeleteAttachment && (
                       <button
-                        className="danger h-9 px-3 text-sm"
+                        className="danger ticket-detail__attachment-button ticket-detail__attachment-button--danger"
                         onClick={() => handleDeleteAttachment(attachment.id, attachment.originalName)}
                         type="button"
                       >
