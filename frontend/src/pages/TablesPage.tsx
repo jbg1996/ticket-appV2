@@ -190,7 +190,7 @@ export function TablesPage() {
                 <div className="action-row">
                   <button onClick={() => handleEditTicketType(item)} disabled={loading}>Edit</button>
                   {item.name.trim().toUpperCase() !== 'OTHER' && (
-                    <button className="secondary" onClick={() => handleDeleteTicketType(item.id)} disabled={loading}>Delete</button>
+                    <button className="danger" onClick={() => handleDeleteTicketType(item.id)} disabled={loading}>Delete</button>
                   )}
                 </div>
               </li>
