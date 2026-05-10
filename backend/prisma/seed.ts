@@ -39,7 +39,6 @@ async function main() {
   await prisma.ticketHistory.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.report.deleteMany();
-  await prisma.setting.deleteMany();
   await prisma.user.deleteMany();
   await prisma.ticketType.deleteMany();
   await prisma.status.deleteMany();
@@ -140,11 +139,19 @@ async function main() {
     });
   }
 
-  await prisma.setting.upsert({
-    where: { key: 'HEADER_COLOR' },
-    update: { value: '#1f2937' },
-    create: { key: 'HEADER_COLOR', value: '#1f2937' }
-  });
+  const defaultSettings = [
+    { key: 'HEADER_COLOR', value: '#1e1e1e' },
+    { key: 'SIDEBAR_COLOR', value: '#282828' },
+    { key: 'APP_LOGO_URL', value: 'https://res.cloudinary.com/dcjouquja/image/upload/v1771182335/Logo_TiMapp.png' },
+    { key: 'COMPANY_LOGO_URL', value: 'https://res.cloudinary.com/dcjouquja/image/upload/v1771182565/Logo_Icono_TiMapp.png' }
+  ];
+
+  for (const setting of defaultSettings) {
+    const existing = await prisma.setting.findUnique({ where: { key: setting.key } });
+    if (!existing) {
+      await prisma.setting.create({ data: setting });
+    }
+  }
 
   const allUsers = await prisma.user.findMany();
   const admins = allUsers.filter((u) => u.userTypeId === adminTypeId);

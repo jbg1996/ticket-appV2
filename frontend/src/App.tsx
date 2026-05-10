@@ -24,17 +24,31 @@ import './styles/main.css';
 type AppSettings = {
   headerColor: string;
   sidebarColor: string;
+  appLogoUrl: string;
+  companyLogoUrl: string;
 };
 
 function AppShell() {
   const { user } = useAuth();
-  const [appSettings, setAppSettings] = useState<AppSettings>({ headerColor: '#1f2937', sidebarColor: '#0f172a' });
+  const [appSettings, setAppSettings] = useState<AppSettings>({
+    headerColor: '#1e1e1e',
+    sidebarColor: '#282828',
+    appLogoUrl: 'https://res.cloudinary.com/dcjouquja/image/upload/v1771182335/Logo_TiMapp.png',
+    companyLogoUrl: 'https://res.cloudinary.com/dcjouquja/image/upload/v1771182565/Logo_Icono_TiMapp.png'
+  });
 
   useEffect(() => {
     if (!user) return;
     apiFetch<AppSettings>('/api/settings/header-color', { cache: 'no-store' })
       .then((data) => setAppSettings(data))
-      .catch(() => setAppSettings({ headerColor: '#1f2937', sidebarColor: '#0f172a' }));
+      .catch(() =>
+        setAppSettings({
+          headerColor: '#1e1e1e',
+          sidebarColor: '#282828',
+          appLogoUrl: 'https://res.cloudinary.com/dcjouquja/image/upload/v1771182335/Logo_TiMapp.png',
+          companyLogoUrl: 'https://res.cloudinary.com/dcjouquja/image/upload/v1771182565/Logo_Icono_TiMapp.png'
+        })
+      );
   }, [user]);
 
   return (
@@ -44,7 +58,12 @@ function AppShell() {
         <Route
           element={
             <ProtectedRoute>
-              <AppLayout initialHeaderColor={appSettings.headerColor} initialSidebarColor={appSettings.sidebarColor} />
+              <AppLayout
+                initialHeaderColor={appSettings.headerColor}
+                initialSidebarColor={appSettings.sidebarColor}
+                initialAppLogoUrl={appSettings.appLogoUrl}
+                initialCompanyLogoUrl={appSettings.companyLogoUrl}
+              />
             </ProtectedRoute>
           }
         >
