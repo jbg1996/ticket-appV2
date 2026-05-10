@@ -8,7 +8,7 @@ import { ColumnHeaderTrigger } from '../components/ColumnHeaderTrigger';
 import { ColumnMenu } from '../components/ColumnMenu';
 import { ReportIcon } from '../components/icons/ReportIcon';
 import { DEFAULT_TICKET_VIEW_BY_ROLE, getAllowedTicketViews, type TicketViewKey } from '../constants/ticketViews';
-import type { ColumnFilter, DateFilterPreset } from '../components/ColumnMenu';
+import type { ColumnFilter } from '../components/ColumnMenu';
 
 type Ticket = {
   id: number;
@@ -171,7 +171,9 @@ export function TicketsPage() {
     nextPage = page,
     nextPageSize = pageSize,
     searchValue = globalSearch,
-    view = selectedView
+    view = selectedView,
+    filters = columnFilters,
+    sortState = sorting
   ) => {
     setIsLoading(true);
     setLoadError('');
@@ -182,6 +184,11 @@ export function TicketsPage() {
       });
       if (searchValue.trim()) params.set('text', searchValue.trim());
       if (view) params.set('view', view);
+      if (Object.keys(filters).length > 0) params.set('filters', JSON.stringify(filters));
+      if (sortState) {
+        params.set('sortBy', sortState.columnId);
+        params.set('sortDir', sortState.direction);
+      }
 
       const response = await apiFetch<PaginatedTicketsResponse>(`/api/tickets?${params.toString()}`);
       setTickets(response.data);
@@ -206,8 +213,8 @@ export function TicketsPage() {
 
   useEffect(() => {
     if (!selectedView) return;
-    loadTickets(page, pageSize, globalSearch, selectedView);
-  }, [page, pageSize, globalSearch, selectedView]);
+    loadTickets(page, pageSize, globalSearch, selectedView, columnFilters, sorting);
+  }, [page, pageSize, globalSearch, selectedView, columnFilters, sorting]);
 
   useEffect(() => {
     setSelectedIds((prev) => new Set([...prev].filter((id) => tickets.some((ticket) => ticket.id === id))));
@@ -235,153 +242,7 @@ export function TicketsPage() {
     []
   );
 
-  const columnMap = useMemo(
-    () =>
-      columnDefinitions.reduce(
-        (acc, column) => ({ ...acc, [column.id]: column }),
-        {} as Record<string, ColumnDefinition>
-      ),
-    [columnDefinitions]
-  );
-
-  const normalizeValue = (value: string | number | null | undefined) => (value ?? '').toString().toLowerCase();
-
-  const matchesTextFilter = (
-    value: string | number | null | undefined,
-    filter: Extract<ColumnFilter, { kind: 'text' }>
-  ) => {
-    const normalized = normalizeValue(value);
-    const filterValue = filter.value.toLowerCase();
-    switch (filter.op) {
-      case 'Equals':
-        return normalized === filterValue;
-      case 'Does not equal':
-        return normalized !== filterValue;
-      case 'Contains':
-        return normalized.includes(filterValue);
-      case 'Does not contain':
-        return !normalized.includes(filterValue);
-      case 'Begin with':
-        return normalized.startsWith(filterValue);
-      case 'Does not begin with':
-        return !normalized.startsWith(filterValue);
-      case 'End with':
-        return normalized.endsWith(filterValue);
-      case 'Does not end with':
-        return !normalized.endsWith(filterValue);
-      case 'Contains data':
-        return normalized.trim().length > 0;
-      case 'Does not contain data':
-        return normalized.trim().length === 0;
-      default:
-        return true;
-    }
-  };
-
-  const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  const endOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);
-
-  const getPresetRange = (preset: DateFilterPreset) => {
-    const now = new Date();
-    switch (preset) {
-      case 'Today': {
-        const start = startOfDay(now);
-        const end = endOfDay(now);
-        return { start, end, endOfRange: end };
-      }
-      case 'Yesterday': {
-        const yesterday = new Date(now);
-        yesterday.setDate(now.getDate() - 1);
-        const start = startOfDay(yesterday);
-        const end = endOfDay(yesterday);
-        return { start, end, endOfRange: end };
-      }
-      case 'This week': {
-        const day = now.getDay();
-        const diff = (day + 6) % 7;
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - diff);
-        const start = startOfDay(weekStart);
-        const weekEnd = new Date(start);
-        weekEnd.setDate(start.getDate() + 6);
-        const endOfRange = endOfDay(weekEnd);
-        return { start, end: now, endOfRange };
-      }
-      case 'This month': {
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        const endOfRange = endOfDay(monthEnd);
-        return { start, end: now, endOfRange };
-      }
-      case 'This year': {
-        const start = new Date(now.getFullYear(), 0, 1);
-        const yearEnd = new Date(now.getFullYear(), 11, 31);
-        const endOfRange = endOfDay(yearEnd);
-        return { start, end: now, endOfRange };
-      }
-      default: {
-        const start = startOfDay(now);
-        const end = endOfDay(now);
-        return { start, end, endOfRange: end };
-      }
-    }
-  };
-
-  const matchesDateFilter = (
-    value: string | number | null | undefined,
-    filter: Extract<ColumnFilter, { kind: 'date' }>
-  ) => {
-    if (!value) return false;
-    const timestamp = Date.parse(value.toString());
-    if (Number.isNaN(timestamp)) return false;
-    const date = new Date(timestamp);
-    const { start, end, endOfRange } = getPresetRange(filter.preset);
-    switch (filter.op) {
-      case 'On':
-        return date >= start && date <= end;
-      case 'On or after':
-        return date >= start;
-      case 'On or before':
-        return date <= endOfRange;
-      default:
-        return true;
-    }
-  };
-
-  const getSortableValue = (value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'number') return value;
-    const timestamp = Date.parse(value);
-    if (!Number.isNaN(timestamp)) return timestamp;
-    return value.toString().toLowerCase();
-  };
-
-  const applyAll = (data: Ticket[]) => {
-    let result = [...data];
-    Object.entries(columnFilters).forEach(([columnId, filter]) => {
-      const column = columnMap[columnId];
-      if (!column) return;
-      if (filter.kind === 'date') result = result.filter((ticket) => matchesDateFilter(column.accessor(ticket), filter));
-      else result = result.filter((ticket) => matchesTextFilter(column.accessor(ticket), filter));
-    });
-
-    if (sorting) {
-      const column = columnMap[sorting.columnId];
-      if (column) {
-        result.sort((a, b) => {
-          const valueA = getSortableValue(column.accessor(a));
-          const valueB = getSortableValue(column.accessor(b));
-          if (valueA < valueB) return sorting.direction === 'asc' ? -1 : 1;
-          if (valueA > valueB) return sorting.direction === 'asc' ? 1 : -1;
-          return 0;
-        });
-      }
-    }
-
-    return result;
-  };
-
-  const displayTickets = useMemo(() => applyAll(tickets), [tickets, columnFilters, sorting]);
+  const displayTickets = tickets;
   const visibleIds = useMemo(() => displayTickets.map((ticket) => ticket.id), [displayTickets]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const isAdmin = user?.role === 'ADMIN';
