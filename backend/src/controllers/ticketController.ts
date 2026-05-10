@@ -41,6 +41,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
     createdById,
     assignedToId,
     text,
+    filters: filtersJson,
     view,
     sortBy,
     sortDir,
@@ -90,15 +91,25 @@ export async function listTickets(req: AuthRequest, res: Response) {
   if (assignedToMe === 'true' && req.user) baseWhere.assignedToId = req.user.id;
   if (createdByMe === 'true' && req.user) baseWhere.createdById = req.user.id;
 
-  const filters: Record<string, ColumnFilterInput> = {};
+  const queryFilters: Record<string, ColumnFilterInput> = {};
+  if (filtersJson) {
+    try {
+      const parsedFilters = JSON.parse(filtersJson) as Record<string, ColumnFilterInput>;
+      if (parsedFilters && typeof parsedFilters === 'object' && !Array.isArray(parsedFilters)) {
+        Object.assign(queryFilters, parsedFilters);
+      }
+    } catch {
+      return res.status(400).json({ message: 'Invalid filters.' });
+    }
+  }
   if (status) {
-    filters.status = { kind: 'text', op: 'Equals', value: normalizeStatusName(status) };
+    queryFilters.status = { kind: 'text', op: 'Equals', value: normalizeStatusName(status) };
   }
   if (priority) {
-    filters.priority = { kind: 'text', op: 'Equals', value: normalizePriorityName(priority) };
+    queryFilters.priority = { kind: 'text', op: 'Equals', value: normalizePriorityName(priority) };
   }
   if (type) {
-    filters.type = { kind: 'text', op: 'Equals', value: normalizeTypeName(type) };
+    queryFilters.type = { kind: 'text', op: 'Equals', value: normalizeTypeName(type) };
   }
 
   const createdAtFilter: Record<string, Date> = {};
@@ -131,7 +142,7 @@ export async function listTickets(req: AuthRequest, res: Response) {
   const { where, orderBy } = buildTicketQuery({
     query: {
       q: text,
-      filters,
+      filters: queryFilters,
       sort: sortBy ? { column: sortBy, direction: sortDirection } : null
     },
     baseWhere

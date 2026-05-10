@@ -28,6 +28,14 @@ export function AppSettingsPage() {
     setDraftSidebarColor(sidebarColor);
   }, [sidebarColor]);
 
+  useEffect(() => {
+    setDraftAppLogo(appLogoUrl ?? '');
+  }, [appLogoUrl]);
+
+  useEffect(() => {
+    setDraftCompanyLogo(companyLogoUrl ?? '');
+  }, [companyLogoUrl]);
+
   const headerColorError = useMemo(
     () => (isValidHexColor(draftHeaderColor) ? '' : 'Use a valid hex color (#RGB or #RRGGBB).'),
     [draftHeaderColor]
@@ -56,7 +64,12 @@ export function AppSettingsPage() {
     try {
       await apiFetch('/api/settings/header-color', {
         method: 'PUT',
-        body: JSON.stringify({ headerColor: draftHeaderColor, sidebarColor: draftSidebarColor })
+        body: JSON.stringify({
+          headerColor: draftHeaderColor,
+          sidebarColor: draftSidebarColor,
+          appLogoUrl: draftAppLogo ? draftAppLogo : null,
+          companyLogoUrl: draftCompanyLogo ? draftCompanyLogo : null
+        })
       });
       setStatus('Saved.');
     } catch {

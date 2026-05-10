@@ -237,6 +237,33 @@ describe('Ticket creation', () => {
     expect(response.body.data).toHaveLength(10);
   });
 
+  it('applies filters before pagination and returns filtered totals', async () => {
+    for (let index = 0; index < 12; index += 1) {
+      await request(app)
+        .post('/api/tickets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ ticketTypeId, description: `Filtered match ${index}`, priorityId });
+    }
+
+    for (let index = 0; index < 8; index += 1) {
+      await request(app)
+        .post('/api/tickets')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ ticketTypeId, description: `Other content ${index}`, priorityId });
+    }
+
+    const filters = encodeURIComponent(JSON.stringify({ title: { kind: 'text', op: 'Contains', value: 'other' } }));
+    const response = await request(app)
+      .get(`/api/tickets?page=1&pageSize=5&filters=${filters}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(8);
+    expect(response.body.totalPages).toBe(2);
+    expect(response.body.data).toHaveLength(5);
+    expect(response.body.data.every((ticket: { title: string }) => ticket.title.toLowerCase().includes('other'))).toBe(true);
+  });
+
   it('allows ADMIN and TECH to create reports, but denies REQUESTER', async () => {
     const adminReportResponse = await request(app)
       .post('/api/reports')
