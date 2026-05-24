@@ -46,6 +46,12 @@ export function AppSettingsPage() {
   );
 
   useEffect(() => {
+    if (isValidHexColor(draftHeaderColor)) {
+      setHeaderColor(draftHeaderColor);
+    }
+  }, [draftHeaderColor, setHeaderColor]);
+
+  useEffect(() => {
     if (isValidHexColor(draftSidebarColor)) {
       setSidebarColor(draftSidebarColor);
     }
